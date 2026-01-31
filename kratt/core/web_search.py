@@ -16,6 +16,13 @@ from playwright.sync_api import sync_playwright, Page
 def improve_search_query(user_term: str, model_name: str) -> str:
     """
     Uses LLM to convert a chat prompt into a keyword-optimized search query.
+
+    Args:
+        user_term (str): The raw user input from the chat.
+        model_name (str): The name of the LLM to use for generation.
+
+    Returns:
+        str: A concise search query optimized for search engines.
     """
     current_year = datetime.date.today().year
     prompt = (
@@ -42,6 +49,8 @@ def improve_search_query(user_term: str, model_name: str) -> str:
 def filter_search_results(user_term: str, results: list[dict], model_name: str) -> list[dict]:
     """
     Uses LLM to filter search results for relevance to the user query.
+
+    Iterates through results and asks the LLM a binary YES/NO question regarding relevance.
     """
     if len(results) <= 2:
         return results
@@ -64,13 +73,23 @@ def filter_search_results(user_term: str, results: list[dict], model_name: str) 
             if "YES" in response['response'].strip().upper():
                 filtered_results.append(item)
         except Exception:
+            # If LLM fails, be permissive and keep the result
             filtered_results.append(item)
 
     return filtered_results
 
 
 def search_duckduckgo(query: str, num_results: int = 10) -> list[dict]:
-    """Performs a DuckDuckGo text search."""
+    """
+    Performs a DuckDuckGo text search.
+
+    Args:
+        query (str): The search string.
+        num_results (int): Max results to fetch.
+
+    Returns:
+        list[dict]: A list of dictionaries containing 'title', 'url', and 'snippet'.
+    """
     results = []
     try:
         with DDGS() as ddgs:
@@ -86,7 +105,11 @@ def search_duckduckgo(query: str, num_results: int = 10) -> list[dict]:
 
 
 def normalize_url(url: str, domain: str) -> str | None:
-    """Ensures URL belongs to the target domain and isn't a binary file."""
+    """
+    Ensures URL belongs to the target domain and isn't a binary file.
+
+    Returns None if the URL is external or points to a resource (img/pdf/zip).
+    """
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or parsed.netloc != domain:
         return None
@@ -100,6 +123,10 @@ def normalize_url(url: str, domain: str) -> str | None:
 def extract_text(page: Page) -> str:
     """
     Extracts readable text from the DOM, removing clutter (ads, scripts).
+
+    Uses JavaScript evaluation to:
+    1. Remove non-content elements (scripts, ads, cookie banners).
+    2. Identify and format headings, paragraphs, and lists into Markdown-like text.
     """
     # Remove clutter
     page.evaluate("""
@@ -127,6 +154,7 @@ def extract_text(page: Page) -> str:
 
             elements.forEach(el => {
                 let text = el.innerText?.trim();
+                // Filter out very short strings or duplicates
                 if (!text || text.length < 10 || seen.has(text)) return;
                 seen.add(text);
 
@@ -150,7 +178,12 @@ def extract_text(page: Page) -> str:
 
 
 def extract_links_prioritized(page: Page) -> dict[str, list[str]]:
-    """Categorizes links into Body, Header, and Footer for intelligent crawling."""
+    """
+    Categorizes links into Body, Header, and Footer for intelligent crawling.
+
+    Body links are generally more relevant for deep scraping than navigation (header)
+    or legal/sitemap links (footer).
+    """
     return page.evaluate("""
         () => {
             const getLinks = (sel) => {
@@ -166,6 +199,7 @@ def extract_links_prioritized(page: Page) -> dict[str, list[str]]:
             ]);
             
             const all = [...document.querySelectorAll('a[href]')].map(a => a.href);
+            // Body links are those not found in header or footer regions
             const body = all.filter(h => !footer.has(h) && !header.has(h));
 
             return {
@@ -187,7 +221,12 @@ class WebScraper:
         self.results: dict[str, str] = {}
 
     def scrape_site(self, start_url: str, page: Page) -> dict[str, str]:
-        """Scrapes a specific URL and optionally follows internal links."""
+        """
+        Scrapes a specific URL and optionally follows internal links.
+
+        Uses a priority queue to traverse the site, prioritizing the landing page (rank 0)
+        over discovered internal links (rank 1).
+        """
         domain = urlparse(start_url).netloc
         visited: set[str] = {start_url}
         site_results: dict[str, str] = {}
@@ -200,12 +239,13 @@ class WebScraper:
 
             try:
                 page.goto(url, wait_until="domcontentloaded", timeout=15000)
-                page.wait_for_timeout(500)  # Hydration wait
+                page.wait_for_timeout(500)  # Hydration wait for JS frameworks
 
                 text = extract_text(page)
                 if text and len(text) > 100:
                     site_results[url] = text
 
+                # If we need more pages, look for body links
                 if len(site_results) < self.max_pages_per_site:
                     links = extract_links_prioritized(page)
                     for href in links["body"]:
@@ -221,13 +261,22 @@ class WebScraper:
         return site_results
 
     def scrape_urls(self, urls: list[str]) -> dict[str, str]:
-        """Launches browser context and scrapes list of URLs."""
+        """
+        Launches browser context and scrapes list of URLs.
+
+        Args:
+            urls (list[str]): List of starting URLs.
+
+        Returns:
+            dict: Mapping of URL to extracted markdown-like text.
+        """
         if not urls:
             return {}
 
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=self.headless)
+                # Set a common user agent to reduce bot blocking
                 context = browser.new_context(
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                     viewport={"width": 1280, "height": 800},

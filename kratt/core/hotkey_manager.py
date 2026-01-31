@@ -12,7 +12,7 @@ class HotkeyManager:
     """
 
     def __init__(
-        self, hotkey_set: Set[keyboard.Key], callback: Callable[[], None]
+            self, hotkey_set: Set[keyboard.Key], callback: Callable[[], None]
     ) -> None:
         self.hotkey_set = hotkey_set
         self.callback = callback

@@ -34,14 +34,14 @@ class OllamaWorker(QThread):
     stopped = Signal()
 
     def __init__(
-        self,
-        history: list[dict],
-        model_name: str,
-        vision_model_name: str,
-        system_prompt: str,
-        image_path: str | None = None,
-        user_text: str = "",
-        web_search_enabled: bool = False,
+            self,
+            history: list[dict],
+            model_name: str,
+            vision_model_name: str,
+            system_prompt: str,
+            image_path: str | None = None,
+            user_text: str = "",
+            web_search_enabled: bool = False,
     ) -> None:
         super().__init__()
         self.history = history

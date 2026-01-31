@@ -5,86 +5,361 @@ Allows model selection (fetched from Ollama) and system prompt customization.
 """
 
 import ollama
+from PySide6.QtCore import Qt, QPoint
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
+    QHBoxLayout,
     QLabel,
     QComboBox,
+    QListView,
     QTextEdit,
-    QDialogButtonBox,
+    QPushButton,
     QFormLayout,
+    QFrame,
+    QGraphicsDropShadowEffect,
 )
 
 
 class SettingsDialog(QDialog):
     def __init__(self, current_settings: dict, parent=None) -> None:
         super().__init__(parent)
+        self.old_pos = None
         self.setWindowTitle("Settings")
-        self.resize(500, 400)
-        self._apply_stylesheet()
+        self.resize(460, 480)
+
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Dialog
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self.settings = current_settings.copy()
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
+        self._setup_ui()
+
+    def _setup_ui(self) -> None:
+        self.main_layout = QVBoxLayout()
+        self.main_layout.setContentsMargins(10, 10, 10, 10)
+        self.setLayout(self.main_layout)
+
+        self.container = QFrame()
+        self.container.setObjectName("Container")
+        self.container.setStyleSheet("""
+            QFrame#Container {
+                background-color: #0d0b09;
+                border-radius: 16px;
+                border: 1px solid #2a2520;
+            }
+        """)
+
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(30)
+        shadow.setColor(QColor(0, 0, 0, 200))
+        shadow.setOffset(0, 4)
+        self.container.setGraphicsEffect(shadow)
+
+        self.container_layout = QVBoxLayout()
+        self.container_layout.setSpacing(0)
+        self.container_layout.setContentsMargins(0, 0, 0, 0)
+        self.container.setLayout(self.container_layout)
+        self.main_layout.addWidget(self.container)
+
+        self._setup_header()
+        self._setup_content()
+
+    def _setup_header(self) -> None:
+        header = QFrame()
+        header.setStyleSheet("background-color: transparent;")
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(16, 12, 16, 8)
+        header.setLayout(header_layout)
+
+        title = QLabel("Settings")
+        title.setStyleSheet("color: #c9a87c; font-weight: 600; font-size: 15px;")
+
+        btn_close = QPushButton("✕")
+        btn_close.setFixedSize(28, 28)
+        btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_close.clicked.connect(self.reject)
+        btn_close.setStyleSheet("""
+            QPushButton {
+                border: none;
+                color: #6b5c4c;
+                font-weight: bold;
+                background: transparent;
+                padding: 4px;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                color: #ff6b6b;
+                background-color: #2a1515;
+            }
+        """)
+
+        header_layout.addWidget(title)
+        header_layout.addStretch()
+        header_layout.addWidget(btn_close)
+        self.container_layout.addWidget(header)
+
+    def _setup_content(self) -> None:
+        content = QFrame()
+        content.setStyleSheet("background-color: transparent;")
+        content_layout = QVBoxLayout()
+        content_layout.setSpacing(16)
+        content_layout.setContentsMargins(20, 12, 20, 20)
+        content.setLayout(content_layout)
 
         form_layout = QFormLayout()
-        form_layout.setSpacing(15)
+        form_layout.setSpacing(12)
 
         self.combo_text_model = QComboBox()
         self.combo_vision_model = QComboBox()
         self._populate_models()
+        self._apply_combo_style(self.combo_text_model)
+        self._apply_combo_style(self.combo_vision_model)
 
-        form_layout.addRow("Text Model:", self.combo_text_model)
-        form_layout.addRow("Image Model:", self.combo_vision_model)
-        self.layout.addLayout(form_layout)
+        label_text = QLabel("Text Model:")
+        label_text.setStyleSheet("color: #c9a87c; font-size: 13px; font-weight: 500;")
+        label_vision = QLabel("Image Model:")
+        label_vision.setStyleSheet("color: #c9a87c; font-size: 13px; font-weight: 500;")
 
-        self.layout.addWidget(QLabel("System Prompt:"))
+        form_layout.addRow(label_text, self.combo_text_model)
+        form_layout.addRow(label_vision, self.combo_vision_model)
+        content_layout.addLayout(form_layout)
+
+        prompt_label = QLabel("System Prompt:")
+        prompt_label.setStyleSheet("color: #c9a87c; font-size: 13px; font-weight: 500; margin-top: 8px;")
+        content_layout.addWidget(prompt_label)
+
         self.txt_prompt = QTextEdit()
         self.txt_prompt.setPlainText(self.settings.get("system_prompt", ""))
-        self.layout.addWidget(self.txt_prompt)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-
-        btn_cancel = buttons.button(QDialogButtonBox.Cancel)
-        if btn_cancel:
-            btn_cancel.setStyleSheet("background-color: #555; color: #ddd;")
-
-        self.layout.addWidget(buttons)
-
-    def _apply_stylesheet(self) -> None:
-        self.setStyleSheet("""
-            QDialog { background-color: #2b2b2b; color: #e0e0e0; }
-            QLabel { color: #e0e0e0; font-size: 14px; }
-            QComboBox {
-                background-color: #3d3d3d; color: white; border: 1px solid #555;
-                padding: 5px; border-radius: 4px;
-            }
-            QComboBox::drop-down { border: none; }
-            QComboBox QAbstractItemView {
-                background-color: #3d3d3d; color: white; selection-background-color: #e67e22;
-                border: 1px solid #555; outline: none;
-            }
+        self.txt_prompt.setStyleSheet("""
             QTextEdit {
-                background-color: #3d3d3d; color: white; border: 1px solid #555;
-                border-radius: 4px; font-family: Segoe UI, sans-serif;
+                background-color: #1a1510;
+                color: #e0d5c5;
+                border: 1px solid #2e2820;
+                border-radius: 8px;
+                font-family: 'Google Sans Flex', sans-serif;
+                font-size: 13px;
+                padding: 8px;
             }
+            QTextEdit:focus {
+                border-color: #7a5c3a;
+            }
+            QScrollBar:vertical {
+                width: 6px;
+                background: transparent;
+                margin: 4px 2px;
+                border: none;
+            }
+            QScrollBar::handle:vertical {
+                background: #3d352c;
+                border-radius: 3px;
+                min-height: 30px;
+                border: none;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #5c4f40;
+                border: none;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+                width: 0px;
+                border: none;
+                background: transparent;
+            }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: transparent;
+                border: none;
+            }
+        """)
+        content_layout.addWidget(self.txt_prompt)
+
+        # Buttons
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(10)
+
+        btn_cancel = QPushButton("Cancel")
+        btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_cancel.clicked.connect(self.reject)
+        btn_cancel.setStyleSheet("""
             QPushButton {
-                background-color: #e67e22; color: white; border: none;
-                padding: 8px 16px; border-radius: 4px;
+                background-color: #1a1510;
+                color: #a08060;
+                border: 1px solid #2e2820;
+                padding: 10px 20px;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 13px;
             }
-            QPushButton:hover { background-color: #d35400; } 
+            QPushButton:hover {
+                background-color: #252015;
+                border-color: #3d352c;
+            }
         """)
 
+        btn_save = QPushButton("Save")
+        btn_save.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_save.clicked.connect(self.accept)
+        btn_save.setStyleSheet("""
+            QPushButton {
+                background-color: #e67e22;
+                color: #0d0b09;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background-color: #f39c12;
+            }
+            QPushButton:pressed {
+                background-color: #d35400;
+            }
+        """)
+
+        btn_layout.addStretch()
+        btn_layout.addWidget(btn_cancel)
+        btn_layout.addWidget(btn_save)
+        content_layout.addLayout(btn_layout)
+
+        self.container_layout.addWidget(content)
+
+    def _apply_combo_style(self, combo: QComboBox) -> None:
+        """
+        Applies stylesheet and ensures the popup view is styled correctly.
+
+        Includes a workaround for Linux/Qt where dropdown popups may inherit
+        native OS window borders/backgrounds incorrectly.
+        """
+        view = QListView()
+        combo.setView(view)
+
+        # Explicitly remove the frame to prevent system borders
+        view.setFrameShape(QFrame.Shape.NoFrame)
+        view.setFrameShadow(QFrame.Shadow.Plain)
+
+        # Styling
+        combo.setStyleSheet("""
+            QComboBox {
+                background-color: #1a1510;
+                color: #e0d5c5;
+                border: 1px solid #2e2820;
+                padding: 4px 8px;
+                border-radius: 8px;
+                font-size: 12px;
+            }
+            QComboBox:hover {
+                border-color: #3d352c;
+            }
+            QComboBox:focus {
+                border-color: #7a5c3a;
+                outline: none;
+            }
+            QComboBox::drop-down {
+                border-radius: 8px;
+                width: 20px;
+                border: none;
+            }
+            QComboBox::down-arrow {
+                width: 0px;
+                height: 0px;
+                border: none;
+            }
+            
+            QComboBox QFrame {
+                border: none;
+                background: transparent;
+            }
+
+            /* Popup View Styling */
+            QComboBox QAbstractItemView {
+                background-color: #1a1510;
+                color: #e0d5c5;
+                border-radius: 8px;
+                selection-background-color: #e67e22;
+                selection-color: #0d0b09;
+                outline: none;
+                padding: 1px; /* Minimal padding */
+                margin: 0px;
+            }
+            
+            QComboBox QAbstractItemView::item {
+                min-height: 14px;
+                padding: 2px 4px;
+                border-radius: 4px;
+                color: #e0d5c5;
+                border: none;
+                font-size: 11px;
+            }
+            
+            /* Highlight/Hover State */
+            QComboBox QAbstractItemView::item:hover,
+            QComboBox QAbstractItemView::item:selected {
+                background-color: #e67e22;
+                color: #0d0b09;
+                border: none;
+            }
+
+            /* Scrollbar styling */
+            QScrollBar:vertical {
+                width: 4px;
+                background: #1a1510;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #3d352c;
+                border-radius: 2px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #5c4f40;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: transparent;
+            }
+        """)
+
+        original_showpopup = combo.showPopup
+
+        def custom_showpopup():
+            original_showpopup()
+            popup_window = view.window()
+            popup_window.setStyleSheet("""
+                QMainWindow, QWidget {
+                    background-color: #1a1510;
+                    border: 0px solid #2e2820;
+                    border-radius: 8px;
+                    margin: 0px;
+                    padding: 0px;
+                }
+            """)
+            popup_window.setWindowFlags(
+                popup_window.windowFlags() | Qt.WindowType.FramelessWindowHint
+            )
+
+        combo.showPopup = custom_showpopup
+
     def _populate_models(self) -> None:
-        """Fetches available models from the local Ollama instance."""
+        """
+        Fetches available models from the local Ollama instance.
+
+        Handles both dictionary and object response formats from different
+        versions of the Ollama Python client.
+        """
         try:
             models_info = ollama.list()
             model_list = []
 
-            # Handle API variations
-            models_data = models_info.get("models", []) if isinstance(models_info, dict) else getattr(models_info, "models", [])
+            # Handle both dictionary and object responses from Ollama client
+            models_data = models_info.get("models", []) if isinstance(models_info, dict) else getattr(models_info,
+                                                                                                      "models", [])
 
             for m in models_data:
                 name = m.get("name") if isinstance(m, dict) else getattr(m, "name", None)
@@ -97,24 +372,73 @@ class SettingsDialog(QDialog):
             self.combo_text_model.addItems(model_list)
             self.combo_vision_model.addItems(model_list)
 
-            # Set current selections
-            idx_text = self.combo_text_model.findText(self.settings.get("main_model", ""))
-            if idx_text >= 0: self.combo_text_model.setCurrentIndex(idx_text)
+            # Helper to safely find model index (handling implicit :latest)
+            def find_model_index(combo: QComboBox, model_name: str) -> int:
+                # Try exact match
+                idx = combo.findText(model_name)
+                if idx >= 0:
+                    return idx
 
-            idx_vis = self.combo_vision_model.findText(self.settings.get("vision_model", ""))
-            if idx_vis >= 0: self.combo_vision_model.setCurrentIndex(idx_vis)
+                # Try appending :latest if missing (e.g. 'phi4' -> 'phi4:latest')
+                if ":" not in model_name:
+                    idx = combo.findText(f"{model_name}:latest")
+                    if idx >= 0:
+                        return idx
+
+                # Try removing :latest if present (e.g. 'phi4:latest' -> 'phi4')
+                if model_name.endswith(":latest"):
+                    short_name = model_name.replace(":latest", "")
+                    idx = combo.findText(short_name)
+                    if idx >= 0:
+                        return idx
+
+                return -1
+
+            # Set Text Model
+            current_main = self.settings.get("main_model", "")
+            idx_text = find_model_index(self.combo_text_model, current_main)
+            if idx_text >= 0:
+                self.combo_text_model.setCurrentIndex(idx_text)
+
+            # Set Vision Model
+            current_vis = self.settings.get("vision_model", "")
+            idx_vis = find_model_index(self.combo_vision_model, current_vis)
+            if idx_vis >= 0:
+                self.combo_vision_model.setCurrentIndex(idx_vis)
 
         except Exception as e:
-            # Fallback if Ollama is unreachable
             print(f"Ollama connection error: {e}")
+            # Fallback: add current settings so they are at least selectable
             curr_main = self.settings.get("main_model", "phi4-mini")
             curr_vis = self.settings.get("vision_model", "moondream:latest")
-            self.combo_text_model.addItem(curr_main)
-            self.combo_vision_model.addItem(curr_vis)
+
+            # Avoid duplicates
+            if self.combo_text_model.findText(curr_main) == -1:
+                self.combo_text_model.addItem(curr_main)
+            self.combo_text_model.setCurrentText(curr_main)
+
+            if self.combo_vision_model.findText(curr_vis) == -1:
+                self.combo_vision_model.addItem(curr_vis)
+            self.combo_vision_model.setCurrentText(curr_vis)
 
     def get_settings(self) -> dict:
+        """Returns the dictionary of settings configured in the dialog."""
         return {
             "main_model": self.combo_text_model.currentText(),
             "vision_model": self.combo_vision_model.currentText(),
             "system_prompt": self.txt_prompt.toPlainText().strip(),
         }
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.old_pos = event.globalPosition().toPoint()
+
+    def mouseMoveEvent(self, event) -> None:
+        if hasattr(self, "old_pos"):
+            delta = QPoint(event.globalPosition().toPoint() - self.old_pos)
+            self.move(self.x() + delta.x(), self.y() + delta.y())
+            self.old_pos = event.globalPosition().toPoint()
+
+    def mouseReleaseEvent(self, event) -> None:
+        if hasattr(self, "old_pos"):
+            del self.old_pos
