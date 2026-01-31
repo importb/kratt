@@ -1,0 +1,26 @@
+[project]
+name = "kratt"
+version = "0.1.0"
+description = "A lightweight desktop AI assistant powered by Ollama"
+authors = [
+    {name = "Rainer Vana"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "PySide6>=6.10.1",
+    "ollama>=0.6.1",
+    "pynput>=1.8.1",
+    "playwright>=1.57.0",
+    "ddgs>=8.1.1",
+]
+
+[project.scripts]
+kratt = "kratt.main:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
