@@ -99,7 +99,7 @@ class OllamaWorker(QThread):
             self.stopped.emit()
             return
 
-        self.status_update.emit(f"📖 *Reading {len(urls)} pages...*")
+        self.status_update.emit(f"*Reading {len(urls)} pages...*")
         scraper = WebScraper(max_pages_per_site=1, headless=True)
         scraped_data = scraper.scrape_urls(urls)
 

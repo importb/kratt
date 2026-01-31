@@ -1,6 +1,8 @@
 # Kratt
 A lightweight, local-first desktop AI assistant powered by Ollama.
 
+![Kratt example 1](images/example1.png)
+![Kratt example 2](images/example2.png)
 ---
 
 ## Getting Started

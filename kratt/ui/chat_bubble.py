@@ -57,6 +57,7 @@ class ChatBubble(QWidget):
         self.label.setWordWrap(True)
         self.label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.label.setFont(QFont("Segoe UI", 10))
+        self.label.setMaximumWidth(self.max_bubble_width - self.horizontal_margins)
         self.bubble_layout.addWidget(self.label)
 
         if not self.is_user:
