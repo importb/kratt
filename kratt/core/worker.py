@@ -1,5 +1,5 @@
 """
-Ollama background worker.
+Ollama background worker with tool calling support.
 
 Handles inference for text, vision, and web-search augmented requests
 on a separate thread to maintain UI responsiveness.
@@ -15,15 +15,16 @@ from kratt.core.web_search import (
     filter_search_results,
     WebScraper
 )
+from kratt.core.tools import get_tool_definitions, execute_tool
 
 
 class OllamaWorker(QThread):
     """
-    Executes Ollama inference tasks.
+    Executes Ollama inference tasks with tool calling support.
 
     Signals:
         new_token (str): Emitted for every generated token.
-        status_update (str): Emitted to report background activity (searching, reading).
+        status_update (str): Emitted to report background activity.
         finished (float, int): Emitted on completion with (duration, token_count).
         stopped (): Emitted if processing is manually halted.
     """
@@ -81,7 +82,7 @@ class OllamaWorker(QThread):
             self.stopped.emit()
             return
 
-        self.status_update.emit(f"*Searching*")
+        self.status_update.emit(f"*Searching...*")
         raw_results = search_duckduckgo(search_query, num_results=10)
 
         if not raw_results:
@@ -110,7 +111,7 @@ class OllamaWorker(QThread):
         if not context_text:
             context_text = "No readable content found from search results."
 
-        self.status_update.emit("")  # Clear status
+        self.status_update.emit("")
 
         system_msg = (
             f"{self.system_prompt}\n\n"
@@ -132,18 +133,79 @@ class OllamaWorker(QThread):
             self.finished.emit(0, 0)
 
     def _run_normal(self, start_time: float) -> None:
-        """Standard text chat inference."""
+        """Standard text chat inference with tool calling support."""
         messages = [{"role": "system", "content": self.system_prompt}]
         for msg in self.history:
             if msg["role"] != "system":
                 messages.append(msg)
 
+        tools = get_tool_definitions()
+
         try:
-            stream = ollama.chat(model=self.model_name, messages=messages, stream=True)
-            self._consume_stream(stream, start_time)
+            self._run_with_tools(messages, tools, start_time)
         except Exception as e:
             self.new_token.emit(f"Model error: {e}")
             self.finished.emit(0, 0)
+
+    def _run_with_tools(self, messages: list[dict], tools: list[dict], start_time: float, max_iterations: int = 5) -> None:
+        """
+        Agentic loop that handles tool calling.
+
+        Continues until the model produces a final response (no tool calls).
+        """
+        iteration = 0
+        while iteration < max_iterations and not self._stop_requested:
+            iteration += 1
+
+            response = ollama.chat(
+                model=self.model_name,
+                messages=messages,
+                tools=tools,
+                stream=False
+            )
+
+            messages.append(response["message"])
+
+            if response["message"].get("tool_calls"):
+                for tool_call in response["message"]["tool_calls"]:
+                    tool_name = tool_call["function"]["name"]
+                    tool_args = tool_call["function"]["arguments"]
+
+                    self.status_update.emit(f"*Calling {tool_name}...*")
+
+                    try:
+                        result = execute_tool(tool_name, **tool_args)
+                    except Exception as e:
+                        result = f"Tool error: {str(e)}"
+
+                    messages.append({
+                        "role": "tool",
+                        "tool_name": tool_name,
+                        "content": result
+                    })
+            else:
+                self.status_update.emit("")
+
+                content = response["message"].get("content", "")
+                self._emit_content_as_tokens(content, start_time)
+                return
+
+        if iteration >= max_iterations:
+            self.new_token.emit("(Max tool iterations reached)")
+            self._emit_completion(start_time)
+
+    def _emit_content_as_tokens(self, content: str, start_time: float) -> None:
+        """Emit text content as individual tokens for consistency with streaming."""
+        for char in content:
+            self.new_token.emit(char)
+            self.token_count += 1
+
+        self._emit_completion(start_time)
+
+    def _emit_completion(self, start_time: float) -> None:
+        """Emit the finished signal."""
+        duration = time.time() - start_time
+        self.finished.emit(duration, self.token_count)
 
     def _run_vision(self, start_time: float) -> None:
         """Vision model inference on attached image."""

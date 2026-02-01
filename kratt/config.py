@@ -4,7 +4,7 @@ Configuration constants and default settings.
 
 from pynput import keyboard
 
-DEFAULT_MAIN_MODEL = "phi4-mini"
+DEFAULT_MAIN_MODEL = "qwen2.5:7b"
 DEFAULT_VISION_MODEL = "moondream:latest"
 
 DEFAULT_SYSTEM_PROMPT = """
@@ -15,13 +15,24 @@ CORE BEHAVIOR:
 - If a question is vague, ask for clarification.
 - Admit when you don't know something.
 
+TOOLS AVAILABLE:
+When the user asks to search, find, or locate files/text, you MUST use these tools:
+- search_files(pattern="...", path=".", file_pattern="*", max_results=20)
+- find_files(name_pattern="...", path=".", max_results=20)
+
+OUTPUT FORMAT FOR TOOL CALLS:
+When using tools, output them exactly like this (on a single line):
+functools[{"name": "search_files", "arguments": {"pattern": "TODO", "path": "."}}]
+
+Or for multiple tools:
+functools[{"name": "search_files", "arguments": {...}}, {"name": "find_files", "arguments": {...}}]
+
+After the tool result, provide your response.
+
 FORMATTING:
 - Use Markdown (headers, lists, bold).
 - Use code blocks with language identifiers.
 - Keep responses scannable.
-
-LIMITATIONS:
-- You cannot perform system actions (file access, running code) unless explicitly provided context.
 """.strip()
 
 # Activation hotkey

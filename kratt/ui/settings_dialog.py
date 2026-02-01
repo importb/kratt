@@ -349,14 +349,12 @@ class SettingsDialog(QDialog):
     def _populate_models(self) -> None:
         """
         Fetches available models from the local Ollama instance.
-
-        Handles both dictionary and object response formats from different
-        versions of the Ollama Python client.
         """
+        placeholder = "No model selected..."
+        model_names = []
+
         try:
             models_info = ollama.list()
-            model_list = []
-
             # Handle both dictionary and object responses from Ollama client
             models_data = models_info.get("models", []) if isinstance(models_info, dict) else getattr(models_info,
                                                                                                       "models", [])
@@ -366,60 +364,59 @@ class SettingsDialog(QDialog):
                 if not name:
                     name = m.get("model") if isinstance(m, dict) else getattr(m, "model", None)
                 if name:
-                    model_list.append(name)
+                    model_names.append(name)
 
-            model_list.sort()
-            self.combo_text_model.addItems(model_list)
-            self.combo_vision_model.addItems(model_list)
-
-            # Helper to safely find model index (handling implicit :latest)
-            def find_model_index(combo: QComboBox, model_name: str) -> int:
-                # Try exact match
-                idx = combo.findText(model_name)
-                if idx >= 0:
-                    return idx
-
-                # Try appending :latest if missing (e.g. 'phi4' -> 'phi4:latest')
-                if ":" not in model_name:
-                    idx = combo.findText(f"{model_name}:latest")
-                    if idx >= 0:
-                        return idx
-
-                # Try removing :latest if present (e.g. 'phi4:latest' -> 'phi4')
-                if model_name.endswith(":latest"):
-                    short_name = model_name.replace(":latest", "")
-                    idx = combo.findText(short_name)
-                    if idx >= 0:
-                        return idx
-
-                return -1
-
-            # Set Text Model
-            current_main = self.settings.get("main_model", "")
-            idx_text = find_model_index(self.combo_text_model, current_main)
-            if idx_text >= 0:
-                self.combo_text_model.setCurrentIndex(idx_text)
-
-            # Set Vision Model
-            current_vis = self.settings.get("vision_model", "")
-            idx_vis = find_model_index(self.combo_vision_model, current_vis)
-            if idx_vis >= 0:
-                self.combo_vision_model.setCurrentIndex(idx_vis)
+            model_names.sort()
 
         except Exception as e:
             print(f"Ollama connection error: {e}")
-            # Fallback: add current settings so they are at least selectable
-            curr_main = self.settings.get("main_model", "phi4-mini")
-            curr_vis = self.settings.get("vision_model", "moondream:latest")
+            # Even on error, we might want to let the user see what they had selected before,
+            # or just show empty. For now, we rely on the logic below to handle selection.
 
-            # Avoid duplicates
-            if self.combo_text_model.findText(curr_main) == -1:
-                self.combo_text_model.addItem(curr_main)
-            self.combo_text_model.setCurrentText(curr_main)
+        # Prepend the placeholder
+        final_list = [placeholder] + model_names
 
-            if self.combo_vision_model.findText(curr_vis) == -1:
-                self.combo_vision_model.addItem(curr_vis)
-            self.combo_vision_model.setCurrentText(curr_vis)
+        self.combo_text_model.clear()
+        self.combo_text_model.addItems(final_list)
+
+        self.combo_vision_model.clear()
+        self.combo_vision_model.addItems(final_list)
+
+        # Helper to safely find model index (handling implicit :latest)
+        def find_model_index(combo: QComboBox, model_name: str) -> int:
+            if not model_name or model_name == placeholder:
+                return 0
+
+            # Try exact match
+            idx = combo.findText(model_name)
+            if idx > 0:
+                return idx
+
+            # Try appending :latest if missing (e.g. 'phi4' -> 'phi4:latest')
+            if ":" not in model_name:
+                idx = combo.findText(f"{model_name}:latest")
+                if idx > 0:
+                    return idx
+
+            # Try removing :latest if present (e.g. 'phi4:latest' -> 'phi4')
+            if model_name.endswith(":latest"):
+                short_name = model_name.replace(":latest", "")
+                idx = combo.findText(short_name)
+                if idx > 0:
+                    return idx
+
+            return -1
+
+        # Set Text Model
+        current_main = self.settings.get("main_model", "")
+        idx_text = find_model_index(self.combo_text_model, current_main)
+        # If found (idx > 0), set it. If not found (-1), set to 0 (Placeholder)
+        self.combo_text_model.setCurrentIndex(max(0, idx_text))
+
+        # Set Vision Model
+        current_vis = self.settings.get("vision_model", "")
+        idx_vis = find_model_index(self.combo_vision_model, current_vis)
+        self.combo_vision_model.setCurrentIndex(max(0, idx_vis))
 
     def get_settings(self) -> dict:
         """Returns the dictionary of settings configured in the dialog."""
