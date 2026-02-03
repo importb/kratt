@@ -4,7 +4,6 @@ Allows the model to invoke tools via function calling.
 """
 
 import os
-import subprocess
 import re
 from pathlib import Path
 from typing import Any
@@ -17,67 +16,85 @@ def search_files(
     max_results: int = 20
 ) -> str:
     """
-    Search for text in files using grep.
+    Search for text patterns in files using Python (cross-platform).
 
     Args:
-        pattern (str): Regex pattern to search for.
-        path (str): Directory path to search in. Defaults to current directory.
-        file_pattern (str): File glob pattern (e.g., '*.py', '*.txt'). Defaults to all files.
-        max_results (int): Maximum number of results to return. Defaults to 20.
+        pattern (str): Text or regex pattern to search for.
+        path (str): Directory path to search in. Defaults to current
+                    directory.
+        file_pattern (str): File glob pattern (e.g., '*.py', '*.txt').
+                            Defaults to all files.
+        max_results (int): Maximum number of results to return.
+                           Defaults to 20.
 
     Returns:
         str: Formatted search results or error message.
     """
     try:
-        expanded_path = os.path.expanduser(path)
+        search_path = Path(path).expanduser().resolve()
 
-        if not os.path.isdir(expanded_path):
+        if not search_path.is_dir():
             return f"Error: '{path}' is not a valid directory."
 
         if not pattern.strip():
             return "Error: Search pattern cannot be empty."
 
-        safe_pattern = re.escape(pattern)
+        # Compile regex pattern once
+        try:
+            regex = re.compile(pattern)
+        except re.error:
+            # If not a valid regex, treat as literal string
+            regex = re.compile(re.escape(pattern))
 
-        cmd = [
-            "grep",
-            "-r",
-            "--include=" + file_pattern,
-            "-n",
-            "-H",
-            safe_pattern,
-            expanded_path,
-        ]
+        results = []
+        processed_files = 0
 
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
+        # Use rglob for cross-platform file matching
+        for filepath in search_path.rglob(file_pattern):
+            if not filepath.is_file():
+                continue
 
-        if result.returncode == 1:
-            return f"No matches found for pattern '{pattern}' in {expanded_path}"
+            processed_files += 1
+            if len(results) >= max_results:
+                break
 
-        if result.returncode != 0:
-            return f"Search error: {result.stderr.strip()}"
+            try:
+                with open(filepath, 'r', encoding='utf-8',
+                          errors='ignore') as f:
+                    for line_num, line in enumerate(f, 1):
+                        if regex.search(line):
+                            relative_path = filepath.relative_to(
+                                search_path)
+                            results.append(
+                                f"{relative_path}:{line_num}:"
+                                f"{line.rstrip()}"
+                            )
+                            if len(results) >= max_results:
+                                break
+            except (IOError, OSError):
+                # Skip files that can't be read
+                pass
 
-        lines = result.stdout.strip().split("\n")[:max_results]
-
-        if not lines or not lines[0]:
-            return f"No matches found for pattern '{pattern}' in {expanded_path}"
+        if not results:
+            return (
+                f"No matches found for pattern '{pattern}' in "
+                f"{search_path}"
+            )
 
         formatted = "Search results:\n"
-        for i, line in enumerate(lines, 1):
-            formatted += f"{i}. {line}\n"
+        for i, result in enumerate(results, 1):
+            formatted += f"{i}. {result}\n"
 
-        if len(result.stdout.strip().split("\n")) > max_results:
-            formatted += f"\n(Showing {max_results} of {len(result.stdout.strip().split(chr(10)))} results)"
+        # Count total matches if we hit the limit
+        total_matches = len(results)
+        if processed_files > 0 and total_matches >= max_results:
+            formatted += (
+                f"\n(Showing {max_results} results. "
+                f"Adjust max_results to see more.)"
+            )
 
         return formatted
 
-    except subprocess.TimeoutExpired:
-        return "Error: Search timed out (limit 10 seconds)"
     except Exception as e:
         return f"Error during search: {str(e)}"
 
@@ -88,59 +105,53 @@ def find_files(
     max_results: int = 20
 ) -> str:
     """
-    Find files by name using find command.
+    Find files by name pattern using Python (cross-platform).
 
     Args:
-        name_pattern (str): Filename pattern to search for.
-        path (str): Directory path to search in. Defaults to current directory.
+        name_pattern (str): Filename pattern to search for (glob syntax).
+        path (str): Directory path to search in. Defaults to current
+                    directory.
         max_results (int): Maximum number of results to return.
 
     Returns:
         str: Formatted file list or error message.
     """
     try:
-        expanded_path = os.path.expanduser(path)
+        search_path = Path(path).expanduser().resolve()
 
-        if not os.path.isdir(expanded_path):
+        if not search_path.is_dir():
             return f"Error: '{path}' is not a valid directory."
 
         if not name_pattern.strip():
             return "Error: File name pattern cannot be empty."
 
-        cmd = [
-            "find",
-            expanded_path,
-            "-type", "f",
-            "-name", name_pattern,
-        ]
+        results = []
 
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
+        # Use rglob for recursive pattern matching
+        for filepath in search_path.rglob(name_pattern):
+            if filepath.is_file():
+                results.append(str(filepath))
+                if len(results) >= max_results:
+                    break
 
-        if result.returncode != 0:
-            return f"Search error: {result.stderr.strip()}"
-
-        lines = result.stdout.strip().split("\n")
-        if not lines or not lines[0]:
-            return f"No files found matching '{name_pattern}' in {expanded_path}"
-
-        limited_lines = lines[:max_results]
+        if not results:
+            return (
+                f"No files found matching '{name_pattern}' in "
+                f"{search_path}"
+            )
 
         formatted = "Found files:\n"
-        for i, filepath in enumerate(limited_lines, 1):
+        for i, filepath in enumerate(results, 1):
             formatted += f"{i}. {filepath}\n"
 
-        if len(lines) > max_results:
-            formatted += f"\n(Showing {max_results} of {len(lines)} results)"
+        if len(results) >= max_results:
+            formatted += (
+                f"\n(Showing {max_results} results. "
+                f"Adjust max_results to see more.)"
+            )
 
         return formatted
 
-    except subprocess.TimeoutExpired:
-        return "Error: Search timed out (limit 10 seconds)"
     except Exception as e:
         return f"Error during search: {str(e)}"
 
@@ -149,7 +160,8 @@ def get_tool_definitions() -> list[dict]:
     """
     Returns the tool definitions for Ollama's function calling.
 
-    These definitions tell the model what tools are available and how to use them.
+    These definitions tell the model what tools are available and how
+    to use them.
     """
     return [
         {
@@ -157,8 +169,9 @@ def get_tool_definitions() -> list[dict]:
             "function": {
                 "name": "search_files",
                 "description": (
-                    "Search for text patterns in files within a directory using grep. "
-                    "Useful for finding code, logs, or specific content in files."
+                    "Search for text patterns in files within a "
+                    "directory. Useful for finding code, logs, or "
+                    "specific content in files."
                 ),
                 "parameters": {
                     "type": "object",
@@ -166,8 +179,9 @@ def get_tool_definitions() -> list[dict]:
                         "pattern": {
                             "type": "string",
                             "description": (
-                                "Text or regex pattern to search for in files. "
-                                "Example: 'def function_name', 'error', 'TODO'"
+                                "Text or regex pattern to search for "
+                                "in files. Example: 'def "
+                                "function_name', 'error', 'TODO'"
                             )
                         },
                         "path": {
@@ -181,13 +195,17 @@ def get_tool_definitions() -> list[dict]:
                         "file_pattern": {
                             "type": "string",
                             "description": (
-                                "File glob pattern to filter by (e.g., '*.py', '*.js', '*.txt'). "
+                                "File glob pattern to filter by "
+                                "(e.g., '*.py', '*.js', '*.txt'). "
                                 "Defaults to '*' (all files)."
                             )
                         },
                         "max_results": {
                             "type": "integer",
-                            "description": "Maximum number of results to return. Defaults to 20."
+                            "description": (
+                                "Maximum number of results to return. "
+                                "Defaults to 20."
+                            )
                         }
                     },
                     "required": ["pattern"]
@@ -200,7 +218,8 @@ def get_tool_definitions() -> list[dict]:
                 "name": "find_files",
                 "description": (
                     "Find files by name pattern within a directory. "
-                    "Useful for locating specific files or exploring directory structure."
+                    "Useful for locating specific files or exploring "
+                    "directory structure."
                 ),
                 "parameters": {
                     "type": "object",
@@ -208,8 +227,10 @@ def get_tool_definitions() -> list[dict]:
                         "name_pattern": {
                             "type": "string",
                             "description": (
-                                "Filename pattern to search for (supports wildcards). "
-                                "Example: '*.py', 'config*', 'test_*.js'"
+                                "Filename pattern to search for "
+                                "(supports wildcards). "
+                                "Example: '*.py', 'config*', "
+                                "'test_*.js'"
                             )
                         },
                         "path": {
@@ -222,7 +243,10 @@ def get_tool_definitions() -> list[dict]:
                         },
                         "max_results": {
                             "type": "integer",
-                            "description": "Maximum number of results to return. Defaults to 20."
+                            "description": (
+                                "Maximum number of results to return. "
+                                "Defaults to 20."
+                            )
                         }
                     },
                     "required": ["name_pattern"]

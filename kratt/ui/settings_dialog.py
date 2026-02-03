@@ -432,9 +432,11 @@ class SettingsDialog(QDialog):
 
     def mouseMoveEvent(self, event) -> None:
         if hasattr(self, "old_pos"):
-            delta = QPoint(event.globalPosition().toPoint() - self.old_pos)
-            self.move(self.x() + delta.x(), self.y() + delta.y())
-            self.old_pos = event.globalPosition().toPoint()
+            current_pos = event.globalPosition().toPoint()
+            dx = current_pos.x() - self.old_pos.x()
+            dy = current_pos.y() - self.old_pos.y()
+            self.move(self.x() + dx, self.y() + dy)
+            self.old_pos = current_pos
 
     def mouseReleaseEvent(self, event) -> None:
         if hasattr(self, "old_pos"):

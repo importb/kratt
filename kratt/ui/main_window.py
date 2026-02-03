@@ -25,9 +25,8 @@ from PySide6.QtWidgets import (
 )
 
 from kratt.config import (
-    DEFAULT_MAIN_MODEL,
-    DEFAULT_VISION_MODEL,
-    DEFAULT_SYSTEM_PROMPT,
+    load_settings,
+    save_settings,
 )
 from kratt.core.worker import OllamaWorker
 from kratt.ui.chat_bubble import ChatBubble
@@ -48,11 +47,7 @@ class MainWindow(QWidget):
         """Initialize the main window and set up all components."""
         super().__init__()
         self.old_pos = None
-        self.app_settings = {
-            "main_model": DEFAULT_MAIN_MODEL,
-            "vision_model": DEFAULT_VISION_MODEL,
-            "system_prompt": DEFAULT_SYSTEM_PROMPT,
-        }
+        self.app_settings = load_settings()
 
         self.history: list[dict] = []
         self.full_response_buffer = ""
@@ -497,6 +492,11 @@ class MainWindow(QWidget):
         dlg = SettingsDialog(self.app_settings, self)
         if dlg.exec():
             self.app_settings = dlg.get_settings()
+            save_settings(self.app_settings)
+
+            # Update system prompt for the current session if the chat is new
+            if len(self.history) <= 1:
+                self.history[0]["content"] = self.app_settings["system_prompt"]
 
     def new_chat(self) -> None:
         """Reset conversation history and clear UI for a new chat."""
