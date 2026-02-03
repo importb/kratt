@@ -1,42 +1,52 @@
 # Kratt
-A lightweight, local-first desktop AI assistant powered by Ollama.
 
-![Kratt example 1](images/example1.png)
+<p align="center">
+  <img src="/images/example1.png" width="450" alt="Kratt Screenshot">
+</p>
+
+<p align="center">
+  A lightweight, local-first desktop AI assistant for Linux, powered by <b>Ollama</b>.
+</p>
 
 ---
 
-## Getting Started
+Kratt is a simple, draggable desktop widget that provides a chat interface for your local language models. It's designed to be a minimal and convenient way to access AI assistance without relying on cloud services.
 
-### Prerequisites
-
-Before you begin, ensure you have the following installed and running:
-
-1.  **Python**: Version 3.10 or newer.
-2.  **Ollama**: Download and install from [ollama.com](https://ollama.com/).
-3.  **LLMs**: Pull at least one general-purpose model and one vision model.
-    ```sh
-    # Example models
-    ollama pull phi3:mini
-    ollama pull moondream
-    ```
+## Requirements
+-   Python 3.10+
+-   Fedora Linux (or another Linux distribution with standard command-line tools).
+-   **Ollama** installed and running.
+-   The `grep` and `find` command-line utilities must be available in your `PATH`.
 
 ### Installation & Running
 
 1.  **Clone the repository:**
     ```sh
-    git clone https://github.com/your-username/kratt.git
+    git clone https://github.com/importb/kratt.git
     cd kratt
     ```
 
 2.  **Install the required Python packages:**
-    It is recommended to use a virtual environment.
     ```sh
     python -m venv .venv
     source .venv/bin/activate
     pip install -r requirements.txt
     ```
 
-3.  **Run the application:**
+3. ** Install Playwright browsers:**
+    ```sh
+    playwright install
+    ```
+
+4. **Pull the required Ollama models:**
+    By default, Kratt uses a main model, a vision model, and an embedding model. These can be changed in the settings.
+    ```sh
+    ollama pull qwen2.5:7b
+    ollama pull moondream:latest
+    ollama pull nomic-embed-text
+    ```
+
+5. **Run the application:**
     ```sh
     python -m kratt.main
     ```

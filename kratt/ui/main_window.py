@@ -1,7 +1,8 @@
 """
 Main application window.
 
-Coordinates user input, history management, and the worker thread.
+Provides the draggable, frameless chat interface with message input,
+history management, image attachment, web search toggle, and worker thread coordination.
 """
 
 import os
@@ -35,12 +36,16 @@ from kratt.ui.settings_dialog import SettingsDialog
 
 class MainWindow(QWidget):
     """
-    Draggable, frameless main chat window.
+    Main draggable, frameless chat window.
+
+    Manages user input, chat history, worker thread execution,
+    and UI state during message generation.
     """
 
     toggle_signal = Signal()
 
     def __init__(self) -> None:
+        """Initialize the main window and set up all components."""
         super().__init__()
         self.old_pos = None
         self.app_settings = {
@@ -63,7 +68,7 @@ class MainWindow(QWidget):
         self.new_chat()
 
     def _setup_ui(self) -> None:
-        """Initializes the UI components, styling, and window flags."""
+        """Initialize the UI components, styling, and window flags."""
         self.setWindowTitle("Kratt")
         self.resize(420, 680)
         self.setWindowFlags(
@@ -104,7 +109,7 @@ class MainWindow(QWidget):
         self._center_window()
 
     def _setup_header(self) -> None:
-        """Sets up the top bar with title, new chat, settings, and close buttons."""
+        """Set up the top bar with title, new chat, settings, and close buttons."""
         self.header = QFrame()
         self.header.setStyleSheet("background-color: transparent;")
         self.header_layout = QHBoxLayout()
@@ -171,7 +176,7 @@ class MainWindow(QWidget):
         self.container_layout.addWidget(self.header)
 
     def _setup_chat_area(self) -> None:
-        """Sets up the scrollable area where chat bubbles appear."""
+        """Set up the scrollable area where chat bubbles appear."""
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setStyleSheet("""
@@ -210,7 +215,16 @@ class MainWindow(QWidget):
         self.container_layout.addWidget(self.scroll_area)
 
     def _get_tinted_icon(self, path: str, color_hex: str) -> QIcon:
-        """Helper to recolor an SVG icon using a composition mode."""
+        """
+        Recolor an SVG icon using composition mode.
+
+        Args:
+            path: Path to the SVG file.
+            color_hex: Target color as hex string (e.g., '#e67e22').
+
+        Returns:
+            QIcon with tinted color.
+        """
         pixmap = QPixmap(path)
         painter = QPainter(pixmap)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
@@ -219,7 +233,7 @@ class MainWindow(QWidget):
         return QIcon(pixmap)
 
     def _setup_input_area(self) -> None:
-        """Sets up the input field, attachment, web toggle, and send buttons."""
+        """Set up the input field, attachment, web toggle, and send buttons."""
         self.input_frame = QFrame()
         self.input_frame.setStyleSheet("background-color: transparent;")
         self.input_layout = QHBoxLayout()
@@ -251,7 +265,7 @@ class MainWindow(QWidget):
         """)
         self.txt_input.returnPressed.connect(self.send_message)
 
-        # Web Button
+        # Web search button
         self.btn_web = QPushButton()
         self.web_icon_path = str(self.res_path / "globe.svg")
         self.btn_web.setIconSize(QSize(14, 14))
@@ -259,7 +273,7 @@ class MainWindow(QWidget):
         self.btn_web.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_web.clicked.connect(self._toggle_web_search)
 
-        # Attach Button
+        # Image attachment button
         self.btn_attach = QPushButton()
         self.attach_icon_path = str(self.res_path / "attachment.svg")
         self.btn_attach.setIconSize(QSize(14, 14))
@@ -267,7 +281,7 @@ class MainWindow(QWidget):
         self.btn_attach.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_attach.clicked.connect(self._select_or_clear_file)
 
-        # Send Button
+        # Send/Stop button
         self.btn_send = QPushButton()
         send_icon_path = str(self.res_path / "send.svg")
         self.btn_send.setIcon(self._get_tinted_icon(send_icon_path, "#e67e22"))
@@ -276,7 +290,7 @@ class MainWindow(QWidget):
         self.btn_send.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_send.clicked.connect(self._on_send_button_clicked)
 
-        # Refresh styles and tinted icons
+        # Update button styles and icons
         self._update_send_button_style()
         self._update_web_button_style()
         self._update_attach_button_style()
@@ -288,14 +302,14 @@ class MainWindow(QWidget):
         self.container_layout.addWidget(self.input_frame)
 
     def _toggle_web_search(self) -> None:
-        """Toggles web search status (disabled while processing)."""
+        """Toggle web search status (disabled while processing)."""
         if self.is_processing:
             return
         self.is_web_enabled = not self.is_web_enabled
         self._update_web_button_style()
 
     def _update_web_button_style(self) -> None:
-        """Updates the web button appearance based on its enabled state."""
+        """Update web button appearance based on its enabled state."""
         if self.is_web_enabled:
             self.btn_web.setIcon(self._get_tinted_icon(self.web_icon_path, "#e67e22"))
             self.btn_web.setToolTip("Web Search (On)")
@@ -323,7 +337,7 @@ class MainWindow(QWidget):
             """)
 
     def _update_send_button_style(self) -> None:
-        """Swaps the send button icon between 'Send' and 'Stop' during generation."""
+        """Update send button icon and color based on processing state."""
         send_icon_path = str(self.res_path / "send.svg")
         stop_icon_path = str(self.res_path / "stop.svg")
 
@@ -355,14 +369,14 @@ class MainWindow(QWidget):
             """)
 
     def _on_send_button_clicked(self) -> None:
-        """Handles the dual functionality of the send button (send vs stop)."""
+        """Handle send button click (send message or stop generation)."""
         if self.is_processing:
             self._force_stop()
         else:
             self.send_message()
 
     def _force_stop(self) -> None:
-        """Signals the worker to stop text generation."""
+        """Signal the worker to stop text generation."""
         if not self.is_processing or self.worker is None:
             return
         self.worker.request_stop()
@@ -371,13 +385,13 @@ class MainWindow(QWidget):
             self.current_ai_bubble.update_text(msg)
 
     def _on_worker_stopped(self) -> None:
-        """Handler called when worker signals it has successfully stopped."""
+        """Handle worker stop signal and finalize the response."""
         if self.full_response_buffer:
             self.history.append({"role": "assistant", "content": self.full_response_buffer})
         self._reset_ui_after_response()
 
     def _reset_ui_after_response(self) -> None:
-        """Re-enables UI controls after generation finishes or is stopped."""
+        """Re-enable UI controls after generation finishes."""
         self.is_processing = False
         self.txt_input.setEnabled(True)
         self.btn_attach.setEnabled(True)
@@ -387,7 +401,7 @@ class MainWindow(QWidget):
         self._scroll_to_bottom()
 
     def _update_attach_button_style(self) -> None:
-        """Visual feedback for whether an image is currently attached."""
+        """Update attachment button appearance based on whether a file is attached."""
         if self.pending_image_path:
             self.btn_attach.setIcon(self._get_tinted_icon(self.attach_icon_path, "#e67e22"))
             name = os.path.basename(self.pending_image_path)
@@ -417,10 +431,10 @@ class MainWindow(QWidget):
 
     def _select_or_clear_file(self) -> None:
         """
-        Handles the attachment button logic.
+        Handle attachment button logic.
 
-        If a file is already attached, clicking this clears it.
-        Otherwise, it opens a system file dialog.
+        If a file is attached, clicking clears it.
+        Otherwise, opens a file dialog for image selection.
         """
         if self.is_processing:
             return
@@ -432,7 +446,12 @@ class MainWindow(QWidget):
             return
 
         start_dir = str(Path.home())
-        file_path, _ = QFileDialog.getOpenFileName(self, "Select image", start_dir, "Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select image",
+            start_dir,
+            "Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)"
+        )
         if not file_path:
             return
 
@@ -440,31 +459,27 @@ class MainWindow(QWidget):
         self._update_attach_button_style()
         self.txt_input.setFocus()
 
+        # Disable web search when an image is attached
         if self.is_web_enabled:
             self.is_web_enabled = False
             self._update_web_button_style()
 
     def _center_window(self) -> None:
-        """Centers the window on the primary screen."""
+        """Center the window on the primary screen."""
         screen = QApplication.primaryScreen().geometry()
         x = (screen.width() - self.width()) // 2
         y = (screen.height() - self.height()) // 2
         self.move(x, y)
 
     def mousePressEvent(self, event) -> None:
+        """Enable window dragging on left mouse button press."""
         if event.button() == Qt.MouseButton.LeftButton:
             self.old_pos = event.globalPosition().toPoint()
 
     def mouseMoveEvent(self, event) -> None:
-        """
-        Handles window dragging.
-
-        Note: We use explicit integer arithmetic for delta calculation to avoid
-        PySide6 binding issues with QPoint operator overloading on some Linux distros.
-        """
+        """Handle window dragging. Uses explicit arithmetic to avoid PySide6 binding issues."""
         if self.old_pos:
             current_pos = event.globalPosition().toPoint()
-
             dx = current_pos.x() - self.old_pos.x()
             dy = current_pos.y() - self.old_pos.y()
 
@@ -472,23 +487,19 @@ class MainWindow(QWidget):
             self.old_pos = current_pos
 
     def mouseReleaseEvent(self, event) -> None:
+        """Clean up drag tracking on mouse release."""
         self.old_pos = None
 
     def _open_settings(self) -> None:
-        """Opens the modal settings dialog."""
+        """Open the settings dialog (disabled while processing)."""
         if self.is_processing:
             return
         dlg = SettingsDialog(self.app_settings, self)
         if dlg.exec():
             self.app_settings = dlg.get_settings()
-            # Update system prompt in history if the conversation hasn't really started
-            if len(self.history) == 1 and self.history[0]["role"] == "system":
-                self.history[0]["content"] = self.app_settings["system_prompt"]
 
     def new_chat(self) -> None:
-        """
-        Resets the conversation history, clears UI, and stops any active worker.
-        """
+        """Reset conversation history and clear UI for a new chat."""
         if self.is_processing:
             return
         if self.worker is not None:
@@ -505,7 +516,7 @@ class MainWindow(QWidget):
 
         self._update_attach_button_style()
 
-        # Remove all widgets except the top spacer/stretch
+        # Remove all chat bubbles (keep only the layout's stretch)
         while self.chat_layout.count() > 1:
             item = self.chat_layout.takeAt(1)
             if item.widget():
@@ -514,7 +525,10 @@ class MainWindow(QWidget):
 
     def send_message(self) -> None:
         """
-        Validates input, updates UI, determines model/mode, and starts the worker thread.
+        Validate input, update UI, and start the worker thread.
+
+        Creates a user message bubble, disables input, and instantiates
+        the OllamaWorker for processing.
         """
         text = self.txt_input.text().strip()
         has_image = bool(self.pending_image_path)
@@ -529,17 +543,24 @@ class MainWindow(QWidget):
         self.btn_web.setEnabled(False)
         self._update_send_button_style()
 
+        # Add user message bubble
         user_bubble = ChatBubble(text, is_user=True, image_path=self.pending_image_path)
         self.chat_layout.addWidget(user_bubble)
         self.history.append({"role": "user", "content": text})
 
+        self.full_response_buffer = ""
+
+        # Create AI response bubble
         self.current_ai_bubble = ChatBubble("", is_user=False)
         self.chat_layout.addWidget(self.current_ai_bubble)
         self._scroll_to_bottom()
 
-        self.current_model_used = self.app_settings["vision_model"] if has_image else self.app_settings["main_model"]
+        self.current_model_used = (
+            self.app_settings["vision_model"] if has_image
+            else self.app_settings["main_model"]
+        )
 
-        # Instantiate worker thread
+        # Instantiate and configure worker thread
         self.worker = OllamaWorker(
             history=self.history,
             model_name=self.app_settings["main_model"],
@@ -547,7 +568,7 @@ class MainWindow(QWidget):
             system_prompt=self.app_settings["system_prompt"],
             image_path=self.pending_image_path,
             user_text=text,
-            web_search_enabled=(self.is_web_enabled and not has_image)
+            web_search_enabled=self.is_web_enabled
         )
         self.worker.new_token.connect(self._update_stream)
         self.worker.status_update.connect(self._update_status)
@@ -559,19 +580,19 @@ class MainWindow(QWidget):
         self.worker.start()
 
     def _update_status(self, status_msg: str) -> None:
-        """Updates the AI bubble text with status info (e.g. 'Searching...')."""
+        """Update AI bubble with status info (e.g. 'Searching...')."""
         if self.current_ai_bubble:
             self.current_ai_bubble.update_text(status_msg)
             self._scroll_to_bottom()
 
     def _update_stream(self, token: str) -> None:
-        """Appends new tokens to the AI response buffer."""
+        """Append new token to the AI response buffer and update bubble."""
         self.full_response_buffer += token
         self.current_ai_bubble.update_text(self.full_response_buffer + " ▍")
         self._scroll_to_bottom()
 
     def _finalize_stream(self, duration: float, token_count: int) -> None:
-        """Called when generation completes successfully."""
+        """Called when generation completes. Display final text and metadata."""
         if self.current_ai_bubble:
             self.current_ai_bubble.update_text(self.full_response_buffer)
             self.current_ai_bubble.set_metadata(duration, token_count, self.current_model_used)
@@ -579,15 +600,20 @@ class MainWindow(QWidget):
         self._reset_ui_after_response()
 
     def _scroll_to_bottom(self) -> None:
-        """Queues a scroll event to ensure the latest text is visible."""
-        QTimer.singleShot(0, lambda: self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum()))
+        """Queue a scroll to the bottom of the chat area."""
+        QTimer.singleShot(
+            0,
+            lambda: self.scroll_area.verticalScrollBar().setValue(
+                self.scroll_area.verticalScrollBar().maximum()
+            )
+        )
 
     def _setup_hotkey(self) -> None:
-        """Connects the global hotkey signal to the visibility toggle."""
+        """Connect the global hotkey signal to toggle visibility."""
         self.toggle_signal.connect(self.toggle_visibility)
 
     def toggle_visibility(self) -> None:
-        """Shows or hides the window, ensuring focus when shown."""
+        """Show or hide the window, ensuring focus when shown."""
         if self.isVisible():
             self.hide()
         else:

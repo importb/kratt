@@ -1,6 +1,8 @@
 """
 Web search, filtering, and content extraction utilities.
-Uses DuckDuckGo for search and Playwright for scraping.
+
+Provides functions for DuckDuckGo search, LLM-based query optimization and filtering,
+and headless browser scraping via Playwright.
 """
 
 import re
@@ -15,14 +17,14 @@ from playwright.sync_api import sync_playwright, Page
 
 def improve_search_query(user_term: str, model_name: str) -> str:
     """
-    Uses LLM to convert a chat prompt into a keyword-optimized search query.
+    Use LLM to convert a chat prompt into a keyword-optimized search query.
 
     Args:
-        user_term (str): The raw user input from the chat.
-        model_name (str): The name of the LLM to use for generation.
+        user_term: The raw user input from the chat.
+        model_name: The name of the LLM to use for generation.
 
     Returns:
-        str: A concise search query optimized for search engines.
+        A concise search query optimized for search engines.
     """
     current_year = datetime.date.today().year
     prompt = (
@@ -48,9 +50,17 @@ def improve_search_query(user_term: str, model_name: str) -> str:
 
 def filter_search_results(user_term: str, results: list[dict], model_name: str) -> list[dict]:
     """
-    Uses LLM to filter search results for relevance to the user query.
+    Use LLM to filter search results for relevance to the user query.
 
     Iterates through results and asks the LLM a binary YES/NO question regarding relevance.
+
+    Args:
+        user_term: The original user query.
+        results: List of search result dicts with 'title', 'url', 'snippet'.
+        model_name: The LLM to use for relevance assessment.
+
+    Returns:
+        Filtered list of relevant search results.
     """
     if len(results) <= 2:
         return results
@@ -81,14 +91,14 @@ def filter_search_results(user_term: str, results: list[dict], model_name: str) 
 
 def search_duckduckgo(query: str, num_results: int = 10) -> list[dict]:
     """
-    Performs a DuckDuckGo text search.
+    Perform a DuckDuckGo text search.
 
     Args:
-        query (str): The search string.
-        num_results (int): Max results to fetch.
+        query: The search string.
+        num_results: Maximum number of results to fetch.
 
     Returns:
-        list[dict]: A list of dictionaries containing 'title', 'url', and 'snippet'.
+        List of dicts with 'title', 'url', and 'snippet' keys.
     """
     results = []
     try:
@@ -106,9 +116,14 @@ def search_duckduckgo(query: str, num_results: int = 10) -> list[dict]:
 
 def normalize_url(url: str, domain: str) -> str | None:
     """
-    Ensures URL belongs to the target domain and isn't a binary file.
+    Ensure URL belongs to the target domain and isn't a binary/resource file.
 
-    Returns None if the URL is external or points to a resource (img/pdf/zip).
+    Args:
+        url: The URL to validate.
+        domain: The expected domain (e.g., 'example.com').
+
+    Returns:
+        Normalized URL if valid, None if external or resource file.
     """
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or parsed.netloc != domain:
@@ -122,13 +137,18 @@ def normalize_url(url: str, domain: str) -> str | None:
 
 def extract_text(page: Page) -> str:
     """
-    Extracts readable text from the DOM, removing clutter (ads, scripts).
+    Extract readable text from a webpage DOM.
 
-    Uses JavaScript evaluation to:
-    1. Remove non-content elements (scripts, ads, cookie banners).
-    2. Identify and format headings, paragraphs, and lists into Markdown-like text.
+    Removes clutter (scripts, ads, cookie banners) and formats content
+    into structured Markdown-like text with headings and lists.
+
+    Args:
+        page: Playwright Page object.
+
+    Returns:
+        Extracted and formatted text content.
     """
-    # Remove clutter
+    # Remove non-content elements
     page.evaluate("""
         const remove = ['script', 'style', 'noscript', 'iframe', 
                        '.cookie-banner', '.popup', '.modal', '.ad', 
@@ -138,7 +158,7 @@ def extract_text(page: Page) -> str:
         });
     """)
 
-    # Extract structured blocks
+    # Extract structured content blocks
     content = page.evaluate("""
         () => {
             const blocks = [];
@@ -179,10 +199,16 @@ def extract_text(page: Page) -> str:
 
 def extract_links_prioritized(page: Page) -> dict[str, list[str]]:
     """
-    Categorizes links into Body, Header, and Footer for intelligent crawling.
+    Categorize links into Body, Header, and Footer for intelligent crawling.
 
-    Body links are generally more relevant for deep scraping than navigation (header)
-    or legal/sitemap links (footer).
+    Body links are generally more relevant for deep scraping than navigation
+    (header) or legal/sitemap links (footer).
+
+    Args:
+        page: Playwright Page object.
+
+    Returns:
+        Dict with 'body', 'header', and 'footer' link lists.
     """
     return page.evaluate("""
         () => {
@@ -199,7 +225,6 @@ def extract_links_prioritized(page: Page) -> dict[str, list[str]]:
             ]);
             
             const all = [...document.querySelectorAll('a[href]')].map(a => a.href);
-            // Body links are those not found in header or footer regions
             const body = all.filter(h => !footer.has(h) && !header.has(h));
 
             return {
@@ -215,6 +240,14 @@ class WebScraper:
     """Manages headless browser scraping using Playwright."""
 
     def __init__(self, max_pages_per_site: int = 1, delay: float = 0.5, headless: bool = True):
+        """
+        Initialize the web scraper.
+
+        Args:
+            max_pages_per_site: Maximum pages to scrape per domain.
+            delay: Delay in seconds between page requests.
+            headless: Whether to run the browser in headless mode.
+        """
         self.max_pages_per_site = max_pages_per_site
         self.delay = delay
         self.headless = headless
@@ -222,15 +255,21 @@ class WebScraper:
 
     def scrape_site(self, start_url: str, page: Page) -> dict[str, str]:
         """
-        Scrapes a specific URL and optionally follows internal links.
+        Scrape a specific URL and optionally follow internal links.
 
-        Uses a priority queue to traverse the site, prioritizing the landing page (rank 0)
-        over discovered internal links (rank 1).
+        Uses a priority queue to traverse the site, prioritizing the landing page
+        (rank 0) over discovered internal links (rank 1).
+
+        Args:
+            start_url: The initial URL to scrape.
+            page: Playwright Page object.
+
+        Returns:
+            Dict mapping URL to extracted text content.
         """
         domain = urlparse(start_url).netloc
         visited: set[str] = {start_url}
         site_results: dict[str, str] = {}
-        # Priority queue: (rank, url). Lower rank = higher priority.
         queue: list[tuple[int, str]] = [(0, start_url)]
 
         while queue and len(site_results) < self.max_pages_per_site:
@@ -239,13 +278,13 @@ class WebScraper:
 
             try:
                 page.goto(url, wait_until="domcontentloaded", timeout=15000)
-                page.wait_for_timeout(500)  # Hydration wait for JS frameworks
+                page.wait_for_timeout(500)
 
                 text = extract_text(page)
                 if text and len(text) > 100:
                     site_results[url] = text
 
-                # If we need more pages, look for body links
+                # Look for body links if more pages are needed
                 if len(site_results) < self.max_pages_per_site:
                     links = extract_links_prioritized(page)
                     for href in links["body"]:
@@ -262,13 +301,13 @@ class WebScraper:
 
     def scrape_urls(self, urls: list[str]) -> dict[str, str]:
         """
-        Launches browser context and scrapes list of URLs.
+        Launch browser and scrape list of URLs.
 
         Args:
-            urls (list[str]): List of starting URLs.
+            urls: List of starting URLs.
 
         Returns:
-            dict: Mapping of URL to extracted markdown-like text.
+            Mapping of URL to extracted markdown-like text.
         """
         if not urls:
             return {}
@@ -276,7 +315,6 @@ class WebScraper:
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=self.headless)
-                # Set a common user agent to reduce bot blocking
                 context = browser.new_context(
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                     viewport={"width": 1280, "height": 800},
