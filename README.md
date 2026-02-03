@@ -1,7 +1,7 @@
 # Kratt
 
 <p align="center">
-  <img src="/images/example1.png" width="450" alt="Kratt Screenshot">
+  <img src="/images/example1.png" width="832" alt="Kratt Screenshot">
 </p>
 
 <p align="center">
