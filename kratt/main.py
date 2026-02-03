@@ -14,6 +14,16 @@ from kratt.core.hotkey_manager import HotkeyManager
 from kratt.config import HOTKEY
 
 
+def load_stylesheet(app: QApplication) -> None:
+    """Loads the external QSS/CSS file and applies it to the app."""
+    css_path = Path(__file__).parent / "resources" / "style.css"
+    if css_path.exists():
+        with open(css_path, "r", encoding="utf-8") as f:
+            app.setStyleSheet(f.read())
+    else:
+        print(f"Warning: Stylesheet not found at {css_path}")
+
+
 def main() -> None:
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
@@ -26,23 +36,15 @@ def main() -> None:
         families = QFontDatabase.applicationFontFamilies(font_id)
         if families:
             font_family = families[0]
+            # Set default font for the application
             app.setFont(QFont(font_family, 10))
 
-    # Force tooltip styling for better visibility
-    app.setStyleSheet(f"""
-        QToolTip {{
-            font-family: '{font_family}';
-            background-color: #1a1510;
-            color: #e0d5c5;
-            border: 1px solid #2e2820;
-            border-radius: 8px;
-            padding: 6px 4px;
-            font-size: 10px;
-        }}
-        QWidget {{
-            font-family: '{font_family}';
-        }}
-    """)
+    # Load external CSS styles
+    load_stylesheet(app)
+
+    # Force tooltip font styling
+    current_style = app.styleSheet()
+    app.setStyleSheet(current_style + f"\nQToolTip {{ font-family: '{font_family}'; }}")
 
     window = MainWindow()
 

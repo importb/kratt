@@ -78,14 +78,7 @@ class MainWindow(QWidget):
         self.setLayout(self.main_layout)
 
         self.container = QFrame()
-        self.container.setObjectName("Container")
-        self.container.setStyleSheet("""
-            QFrame#Container {
-                background-color: #0d0b09;
-                border-radius: 16px;
-                border: 1px solid #2a2520;
-            }
-        """)
+        self.container.setObjectName("MainContainer")
 
         win_shadow = QGraphicsDropShadowEffect()
         win_shadow.setBlurRadius(30)
@@ -106,62 +99,33 @@ class MainWindow(QWidget):
     def _setup_header(self) -> None:
         """Set up the top bar with title, new chat, settings, and close buttons."""
         self.header = QFrame()
-        self.header.setStyleSheet("background-color: transparent;")
+        self.header.setObjectName("Header")
         self.header_layout = QHBoxLayout()
         self.header_layout.setContentsMargins(16, 12, 16, 8)
         self.header.setLayout(self.header_layout)
 
         title = QLabel("Kratt")
-        title.setStyleSheet("color: #c9a87c; font-weight: 600; font-size: 15px;")
-
-        btn_style = """
-            QPushButton {
-                border: none;
-                color: #6b5c4c;
-                font-weight: bold;
-                font-size: 14px;
-                background: transparent;
-                padding: 4px;
-                border-radius: 6px;
-            }
-            QPushButton:hover {
-                color: #e67e22;
-                background-color: #1f1a15;
-            }
-        """
+        title.setObjectName("WinTitle")
 
         btn_new_chat = QPushButton("⟳")
+        btn_new_chat.setObjectName("HeaderBtn")
         btn_new_chat.setFixedSize(28, 28)
         btn_new_chat.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_new_chat.setToolTip("New chat")
         btn_new_chat.clicked.connect(self.new_chat)
-        btn_new_chat.setStyleSheet(btn_style)
 
         btn_settings = QPushButton("⚙")
+        btn_settings.setObjectName("HeaderBtn")
         btn_settings.setFixedSize(28, 28)
         btn_settings.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_settings.setToolTip("Settings")
         btn_settings.clicked.connect(self._open_settings)
-        btn_settings.setStyleSheet(btn_style)
 
         btn_close = QPushButton("✕")
+        btn_close.setObjectName("CloseBtn")
         btn_close.setFixedSize(28, 28)
         btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_close.clicked.connect(self.close)
-        btn_close.setStyleSheet("""
-            QPushButton {
-                border: none;
-                color: #6b5c4c;
-                font-weight: bold;
-                background: transparent;
-                padding: 4px;
-                border-radius: 6px;
-            }
-            QPushButton:hover {
-                color: #ff6b6b;
-                background-color: #2a1515;
-            }
-        """)
 
         self.header_layout.addWidget(title)
         self.header_layout.addStretch()
@@ -173,35 +137,18 @@ class MainWindow(QWidget):
     def _setup_chat_area(self) -> None:
         """Set up the scrollable area where chat bubbles appear."""
         self.scroll_area = QScrollArea()
+        self.scroll_area.setObjectName("ChatScrollArea")
         self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setStyleSheet("""
-            QScrollArea {
-                border: none;
-                background: transparent;
-            }
-            QScrollBar:vertical {
-                width: 6px;
-                background: transparent;
-                margin: 4px 2px;
-            }
-            QScrollBar::handle:vertical {
-                background: #3d352c;
-                border-radius: 3px;
-                min-height: 30px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background: #5c4f40;
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                height: 0px;
-            }
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-                background: transparent;
-            }
-        """)
+
+        # Ensure the viewport is transparent
+        self.scroll_area.viewport().setAutoFillBackground(False)
+        self.scroll_area.viewport().setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self.chat_widget = QWidget()
-        self.chat_widget.setStyleSheet("background-color: transparent;")
+        self.chat_widget.setObjectName("ChatWidget")
+        # Important: Allow the chat_widget to be styled via CSS background-color rules
+        self.chat_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
+
         self.chat_layout = QVBoxLayout()
         self.chat_layout.setContentsMargins(8, 8, 8, 8)
         self.chat_layout.addStretch()
@@ -230,7 +177,7 @@ class MainWindow(QWidget):
     def _setup_input_area(self) -> None:
         """Set up the input field, attachment, web toggle, and send buttons."""
         self.input_frame = QFrame()
-        self.input_frame.setStyleSheet("background-color: transparent;")
+        self.input_frame.setObjectName("InputFrame")
         self.input_layout = QHBoxLayout()
         self.input_layout.setContentsMargins(12, 8, 12, 14)
         self.input_layout.setSpacing(8)
@@ -239,29 +186,13 @@ class MainWindow(QWidget):
         self.res_path = Path(__file__).parent.parent / "resources"
 
         self.txt_input = QLineEdit()
+        self.txt_input.setObjectName("ChatInput")
         self.txt_input.setPlaceholderText("Message Kratt...")
-        self.txt_input.setStyleSheet("""
-            QLineEdit {
-                background-color: #1a1510;
-                color: #e0d5c5;
-                border: 1px solid #2e2820;
-                border-radius: 20px;
-                padding: 10px 18px;
-                font-size: 13px;
-                selection-background-color: #e67e22;
-            }
-            QLineEdit:focus {
-                border: 1px solid #7a5c3a;
-                background-color: #1f1a14;
-            }
-            QLineEdit::placeholder {
-                color: #5c5045;
-            }
-        """)
         self.txt_input.returnPressed.connect(self.send_message)
 
         # Web search button
         self.btn_web = QPushButton()
+        self.btn_web.setObjectName("WebBtn")
         self.web_icon_path = str(self.res_path / "globe.svg")
         self.btn_web.setIconSize(QSize(14, 14))
         self.btn_web.setFixedSize(38, 38)
@@ -270,6 +201,7 @@ class MainWindow(QWidget):
 
         # Image attachment button
         self.btn_attach = QPushButton()
+        self.btn_attach.setObjectName("AttachBtn")
         self.attach_icon_path = str(self.res_path / "attachment.svg")
         self.btn_attach.setIconSize(QSize(14, 14))
         self.btn_attach.setFixedSize(38, 38)
@@ -278,6 +210,7 @@ class MainWindow(QWidget):
 
         # Send/Stop button
         self.btn_send = QPushButton()
+        self.btn_send.setObjectName("SendBtn")
         send_icon_path = str(self.res_path / "send.svg")
         self.btn_send.setIcon(self._get_tinted_icon(send_icon_path, "#e67e22"))
         self.btn_send.setIconSize(QSize(16, 16))
@@ -296,6 +229,11 @@ class MainWindow(QWidget):
         self.input_layout.addWidget(self.btn_send)
         self.container_layout.addWidget(self.input_frame)
 
+    def _refresh_style(self, widget: QWidget) -> None:
+        """Forces Qt to re-evaluate the stylesheet for a specific widget."""
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
+
     def _toggle_web_search(self) -> None:
         """Toggle web search status (disabled while processing)."""
         if self.is_processing:
@@ -305,63 +243,30 @@ class MainWindow(QWidget):
 
     def _update_web_button_style(self) -> None:
         """Update web button appearance based on its enabled state."""
+        self.btn_web.setProperty("active", self.is_web_enabled)
+        self._refresh_style(self.btn_web)
+
         if self.is_web_enabled:
             self.btn_web.setIcon(self._get_tinted_icon(self.web_icon_path, "#e67e22"))
             self.btn_web.setToolTip("Web Search (On)")
-            self.btn_web.setStyleSheet("""
-                QPushButton {
-                    background-color: #3d2a10;
-                    border-radius: 19px;
-                    border: 1px solid #6b4c20;
-                }
-                QPushButton:hover { background-color: #4a3315; }
-            """)
         else:
             self.btn_web.setIcon(self._get_tinted_icon(self.web_icon_path, "#6b5c4c"))
             self.btn_web.setToolTip("Web Search (Off)")
-            self.btn_web.setStyleSheet("""
-                QPushButton {
-                    background-color: #1a1510;
-                    border-radius: 19px;
-                    border: 1px solid #2e2820;
-                }
-                QPushButton:hover { 
-                    background-color: #252015; 
-                    border-color: #3d352c;
-                }
-            """)
 
     def _update_send_button_style(self) -> None:
         """Update send button icon and color based on processing state."""
         send_icon_path = str(self.res_path / "send.svg")
         stop_icon_path = str(self.res_path / "stop.svg")
 
+        self.btn_send.setProperty("processing", self.is_processing)
+        self._refresh_style(self.btn_send)
+
         if self.is_processing:
             self.btn_send.setIcon(self._get_tinted_icon(stop_icon_path, "#ff6b6b"))
             self.btn_send.setToolTip("Force Stop")
-            self.btn_send.setStyleSheet("""
-                QPushButton {
-                    background-color: #3d1515;
-                    border-radius: 19px;
-                    border: 1px solid #6b3030;
-                }
-                QPushButton:hover {
-                    background-color: #4a1a1a;
-                }
-            """)
         else:
             self.btn_send.setIcon(self._get_tinted_icon(send_icon_path, "#0d0b09"))
             self.btn_send.setToolTip("Send message")
-            self.btn_send.setStyleSheet("""
-                QPushButton {
-                    background-color: #e67e22;
-                    border-radius: 19px;
-                    border: none;
-                }
-                QPushButton:hover {
-                    background-color: #f39c12;
-                }
-            """)
 
     def _on_send_button_clicked(self) -> None:
         """Handle send button click (send message or stop generation)."""
@@ -397,32 +302,18 @@ class MainWindow(QWidget):
 
     def _update_attach_button_style(self) -> None:
         """Update attachment button appearance based on whether a file is attached."""
-        if self.pending_image_path:
+        has_file = bool(self.pending_image_path)
+
+        self.btn_attach.setProperty("has_file", has_file)
+        self._refresh_style(self.btn_attach)
+
+        if has_file:
             self.btn_attach.setIcon(self._get_tinted_icon(self.attach_icon_path, "#e67e22"))
             name = os.path.basename(self.pending_image_path)
             self.btn_attach.setToolTip(f"Attached: {name}\nClick to clear.")
-            self.btn_attach.setStyleSheet("""
-                QPushButton {
-                    background-color: #3d2a10;
-                    border-radius: 19px;
-                    border: 1px solid #6b4c20;
-                }
-                QPushButton:hover { background-color: #4a3315; }
-            """)
         else:
             self.btn_attach.setIcon(self._get_tinted_icon(self.attach_icon_path, "#6b5c4c"))
             self.btn_attach.setToolTip("Attach image")
-            self.btn_attach.setStyleSheet("""
-                QPushButton {
-                    background-color: #1a1510;
-                    border-radius: 19px;
-                    border: 1px solid #2e2820;
-                }
-                QPushButton:hover { 
-                    background-color: #252015; 
-                    border-color: #3d352c;
-                }
-            """)
 
     def _select_or_clear_file(self) -> None:
         """

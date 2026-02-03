@@ -45,12 +45,17 @@ class ChatBubble(QWidget):
         self.setLayout(self.layout)
 
         self.bubble = QFrame()
+
+        if self.is_user:
+            self.bubble.setObjectName("UserBubbleFrame")
+        else:
+            self.bubble.setObjectName("AiBubbleFrame")
+
         self.bubble_layout = QVBoxLayout()
         self.bubble_layout.setContentsMargins(14, 12, 14, 12)
         self.bubble_layout.setSpacing(8)
         self.bubble.setLayout(self.bubble_layout)
 
-        self._apply_bubble_style()
         self._apply_shadow()
 
         self.bubble.setMinimumWidth(self.min_bubble_width)
@@ -68,16 +73,16 @@ class ChatBubble(QWidget):
         self.label.setMaximumWidth(self.max_bubble_width - self.horizontal_margins)
 
         if self.is_user:
-            self.label.setStyleSheet("color: #0d0b09; border: none; background: transparent;")
+            self.label.setObjectName("UserBubbleText")
         else:
-            self.label.setStyleSheet("color: #e0d5c5; border: none; background: transparent;")
+            self.label.setObjectName("AiBubbleText")
 
         self.bubble_layout.addWidget(self.label)
 
         if not self.is_user:
             self.metadata_label = QLabel("")
+            self.metadata_label.setObjectName("AiMetaText")
             self.metadata_label.setFont(QFont("Google Sans Flex", 7))
-            self.metadata_label.setStyleSheet("color: #5c5045; border: none; background: transparent;")
             self.metadata_label.hide()
             self.bubble_layout.addWidget(self.metadata_label)
 
@@ -87,27 +92,6 @@ class ChatBubble(QWidget):
         else:
             self.layout.addWidget(self.bubble)
             self.layout.addStretch()
-
-    def _apply_bubble_style(self) -> None:
-        """Sets background color and corner radius based on sender type."""
-        if self.is_user:
-            self.bubble.setStyleSheet("""
-                QFrame {
-                    background-color: #e67e22;
-                    border-radius: 16px;
-                    border-bottom-right-radius: 4px;
-                    border: none;
-                }
-            """)
-        else:
-            self.bubble.setStyleSheet("""
-                QFrame {
-                    background-color: #1a1510;
-                    border-radius: 16px;
-                    border-bottom-left-radius: 4px;
-                    border: 1px solid #2e2820;
-                }
-            """)
 
     def _apply_shadow(self) -> None:
         """Adds a subtle drop shadow for depth."""
@@ -123,22 +107,18 @@ class ChatBubble(QWidget):
     def _add_image_preview(self, image_path: str) -> None:
         """Adds an image thumbnail to the bubble if the path is valid."""
         self.image_label = QLabel()
+        self.image_label.setObjectName("ImagePreview")
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.image_label.setStyleSheet(
-            "background-color: rgba(0,0,0,0.2); border-radius: 12px; padding: 4px; border: none;"
-        )
 
         image_path = os.path.abspath(os.path.expanduser(image_path))
         if not os.path.isfile(image_path):
             self.image_label.setText(f"(Image not found)\n{image_path}")
-            self.image_label.setStyleSheet("color: #5c5045; border: none;")
             self.bubble_layout.addWidget(self.image_label)
             return
 
         pixmap = QPixmap(image_path)
         if pixmap.isNull():
             self.image_label.setText(f"(Unsupported)\n{os.path.basename(image_path)}")
-            self.image_label.setStyleSheet("color: #5c5045; border: none;")
         else:
             scaled = pixmap.scaled(
                 self.max_bubble_width - self.horizontal_margins,

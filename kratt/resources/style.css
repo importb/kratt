@@ -1,0 +1,360 @@
+/* ============================================================
+   GLOBAL STYLES
+   ============================================================ */
+
+QWidget {
+    font-family: "Google Sans Flex", "Sans Serif";
+}
+
+QToolTip {
+    background-color: #1a1510;
+    color: #e0d5c5;
+    border: 1px solid #2e2820;
+    border-radius: 8px;
+    padding: 6px 4px;
+    font-size: 10px;
+}
+
+/* Scrollbars (Vertical) */
+QScrollBar:vertical {
+    width: 6px;
+    background: transparent;
+    margin: 4px 2px;
+    border: none;
+}
+
+QScrollBar::handle:vertical {
+    background: #3d352c;
+    border-radius: 3px;
+    min-height: 30px;
+    border: none;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #5c4f40;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+    width: 0px;
+    border: none;
+    background: transparent;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: transparent;
+    border: none;
+}
+
+/* ============================================================
+   CONTAINERS & WINDOWS
+   ============================================================ */
+
+/* Main Window and Settings Dialog Backgrounds */
+QFrame#MainContainer, QFrame#SettingsContainer {
+    background-color: #0d0b09;
+    border-radius: 16px;
+    border: 1px solid #2a2520;
+}
+
+/*
+   FIX: Targeting QScrollArea and its internal viewport.
+   In Qt, QScrollArea contains a viewport widget that usually has a white background.
+*/
+QScrollArea, QScrollArea > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+
+/* Transparent Backgrounds for sub-sections */
+QWidget#ChatWidget, QFrame#Header, QFrame#InputFrame, QFrame#SettingsContent {
+    background-color: transparent;
+    border: none;
+}
+
+/* ============================================================
+   HEADER BUTTONS
+   ============================================================ */
+
+QLabel#WinTitle {
+    color: #c9a87c;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+/* Standard Header Buttons (New Chat, Settings) */
+QPushButton#HeaderBtn {
+    border: none;
+    color: #6b5c4c;
+    font-weight: bold;
+    font-size: 14px;
+    background: transparent;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+QPushButton#HeaderBtn:hover {
+    color: #e67e22;
+    background-color: #1f1a15;
+}
+
+/* Close Button */
+QPushButton#CloseBtn {
+    border: none;
+    color: #6b5c4c;
+    font-weight: bold;
+    background: transparent;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+QPushButton#CloseBtn:hover {
+    color: #ff6b6b;
+    background-color: #2a1515;
+}
+
+/* ============================================================
+   CHAT BUBBLES
+   ============================================================ */
+
+/* User Message Bubble */
+QFrame#UserBubbleFrame {
+    background-color: #e67e22;
+    border-radius: 16px;
+    border-bottom-right-radius: 4px;
+    border: none;
+}
+
+QLabel#UserBubbleText {
+    color: #0d0b09;
+    border: none;
+    background: transparent;
+}
+
+/* AI Message Bubble */
+QFrame#AiBubbleFrame {
+    background-color: #1a1510;
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    border: 1px solid #2e2820;
+}
+
+QLabel#AiBubbleText {
+    color: #e0d5c5;
+    border: none;
+    background: transparent;
+}
+
+/* Metadata (Token speed/time) */
+QLabel#AiMetaText {
+    color: #5c5045;
+    border: none;
+    background: transparent;
+    font-size: 10px;
+}
+
+/* Image Preview Label */
+QLabel#ImagePreview {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 12px;
+    padding: 4px;
+    border: none;
+    color: #5c5045;
+}
+
+/* ============================================================
+   INPUT AREA
+   ============================================================ */
+
+QLineEdit#ChatInput {
+    background-color: #1a1510;
+    color: #e0d5c5;
+    border: 1px solid #2e2820;
+    border-radius: 20px;
+    padding: 10px 18px;
+    font-size: 13px;
+    selection-background-color: #e67e22;
+}
+
+QLineEdit#ChatInput:focus {
+    border: 1px solid #7a5c3a;
+    background-color: #1f1a14;
+}
+
+QLineEdit#ChatInput::placeholder {
+    color: #5c5045;
+}
+
+/* ============================================================
+   ACTION BUTTONS (Web, Attach, Send)
+   ============================================================ */
+
+/* Web Button (Default / Off) */
+QPushButton#WebBtn {
+    background-color: #1a1510;
+    border-radius: 19px;
+    border: 1px solid #2e2820;
+}
+QPushButton#WebBtn:hover {
+    background-color: #252015;
+    border-color: #3d352c;
+}
+
+/* Web Button (Active / On) */
+QPushButton#WebBtn[active="true"] {
+    background-color: #3d2a10;
+    border: 1px solid #6b4c20;
+}
+QPushButton#WebBtn[active="true"]:hover {
+    background-color: #4a3315;
+}
+
+/* Attach Button (Default) */
+QPushButton#AttachBtn {
+    background-color: #1a1510;
+    border-radius: 19px;
+    border: 1px solid #2e2820;
+}
+QPushButton#AttachBtn:hover {
+    background-color: #252015;
+    border-color: #3d352c;
+}
+
+/* Attach Button (File Attached) */
+QPushButton#AttachBtn[has_file="true"] {
+    background-color: #3d2a10;
+    border: 1px solid #6b4c20;
+}
+QPushButton#AttachBtn[has_file="true"]:hover {
+    background-color: #4a3315;
+}
+
+/* Send Button (Default / Send Mode) */
+QPushButton#SendBtn {
+    background-color: #e67e22;
+    border-radius: 19px;
+    border: none;
+}
+QPushButton#SendBtn:hover {
+    background-color: #f39c12;
+}
+
+/* Send Button (Processing / Stop Mode) */
+QPushButton#SendBtn[processing="true"] {
+    background-color: #3d1515;
+    border: 1px solid #6b3030;
+}
+QPushButton#SendBtn[processing="true"]:hover {
+    background-color: #4a1a1a;
+}
+
+/* ============================================================
+   SETTINGS DIALOG
+   ============================================================ */
+
+QLabel#SettingsLabel {
+    color: #c9a87c;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Text Edit (System Prompt) */
+QTextEdit#SettingsInput {
+    background-color: #1a1510;
+    color: #e0d5c5;
+    border: 1px solid #2e2820;
+    border-radius: 8px;
+    font-size: 13px;
+    padding: 8px;
+}
+QTextEdit#SettingsInput:focus {
+    border-color: #7a5c3a;
+}
+
+/* Settings Action Buttons */
+QPushButton#SettingsCancelBtn {
+    background-color: #1a1510;
+    color: #a08060;
+    border: 1px solid #2e2820;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+}
+QPushButton#SettingsCancelBtn:hover {
+    background-color: #252015;
+    border-color: #3d352c;
+}
+
+QPushButton#SettingsSaveBtn {
+    background-color: #e67e22;
+    color: #0d0b09;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+}
+QPushButton#SettingsSaveBtn:hover {
+    background-color: #f39c12;
+}
+QPushButton#SettingsSaveBtn:pressed {
+    background-color: #d35400;
+}
+
+/* ComboBox Styles */
+QComboBox {
+    background-color: #1a1510;
+    color: #e0d5c5;
+    border: 1px solid #2e2820;
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+QComboBox:hover {
+    border-color: #3d352c;
+}
+QComboBox:focus {
+    border-color: #7a5c3a;
+    outline: none;
+}
+QComboBox::drop-down {
+    border-radius: 8px;
+    width: 20px;
+    border: none;
+}
+QComboBox::down-arrow {
+    width: 0px;
+    height: 0px;
+    border: none;
+}
+QComboBox QFrame {
+    border: none;
+    background: transparent;
+}
+
+/* Popup View Styling */
+QComboBox QAbstractItemView {
+    background-color: #1a1510;
+    color: #e0d5c5;
+    border-radius: 8px;
+    selection-background-color: #e67e22;
+    selection-color: #0d0b09;
+    outline: none;
+    padding: 1px;
+    margin: 0px;
+}
+QComboBox QAbstractItemView::item {
+    min-height: 14px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    color: #e0d5c5;
+    border: none;
+    font-size: 11px;
+}
+QComboBox QAbstractItemView::item:hover,
+QComboBox QAbstractItemView::item:selected {
+    background-color: #e67e22;
+    color: #0d0b09;
+    border: none;
+}
