@@ -34,8 +34,8 @@ FORMATTING:
 - Use code blocks with language identifiers.
 """.strip()
 
-# Global Hotkey (Alt + Menu)
-HOTKEY = {keyboard.Key.alt_l, keyboard.Key.menu}
+# Global Hotkey (L Control + R Alt)
+HOTKEY = {keyboard.Key.ctrl_l, keyboard.Key.alt_r}
 
 # RAG Settings
 RAG_CHUNK_SIZE = 500
