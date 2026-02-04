@@ -1,15 +1,12 @@
 """
 Configuration constants, default settings, and settings persistence for Kratt.
 
-This module defines default models, system prompts, hotkey bindings,
-RAG (Retrieval-Augmented Generation) parameters, and handles loading/saving
-user settings to a JSON file.
+This module defines default models, system prompts, RAG (Retrieval-Augmented
+Generation) parameters, and handles loading/saving user settings to a JSON file.
 """
 
-from pynput import keyboard
 import json
 from pathlib import Path
-from pynput import keyboard
 
 # LLM Models
 DEFAULT_MAIN_MODEL = "qwen2.5:7b"
@@ -33,9 +30,6 @@ FORMATTING:
 - Use Markdown (headers, lists, bold).
 - Use code blocks with language identifiers.
 """.strip()
-
-# Global Hotkey
-HOTKEY = {keyboard.Key.ctrl_l, keyboard.Key.shift_l}
 
 # RAG Settings
 RAG_CHUNK_SIZE = 500

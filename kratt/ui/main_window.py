@@ -43,8 +43,6 @@ class MainWindow(QWidget):
     integration for minimized state.
     """
 
-    toggle_signal = Signal()
-
     def __init__(self) -> None:
         """Initialize the main window and set up all components."""
         super().__init__()
@@ -62,7 +60,6 @@ class MainWindow(QWidget):
 
         self._setup_ui()
         self._setup_tray()
-        self._setup_hotkey()
         self.new_chat()
 
     def _setup_ui(self) -> None:
@@ -185,7 +182,7 @@ class MainWindow(QWidget):
         btn_close.setObjectName("CloseBtn")
         btn_close.setFixedSize(28, 28)
         btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_close.clicked.connect(self.toggle_visibility)
+        btn_close.clicked.connect(self.hide)
 
         self.header_layout.addWidget(title)
         self.header_layout.addStretch()
@@ -549,14 +546,3 @@ class MainWindow(QWidget):
                 self.scroll_area.verticalScrollBar().maximum()
             )
         )
-
-    def _setup_hotkey(self) -> None:
-        """Connect the global hotkey signal to toggle visibility."""
-        self.toggle_signal.connect(self.toggle_visibility)
-
-    def toggle_visibility(self) -> None:
-        """Show or hide the window, ensuring focus when shown."""
-        if self.isVisible():
-            self.hide()
-        else:
-            self.show_window()
