@@ -7,9 +7,9 @@ history management, image attachment, web search toggle, and worker thread coord
 
 import os
 from pathlib import Path
-from PySide6.QtCore import Qt, QPoint, Signal, QTimer, QSize
+from PySide6.QtCore import Qt, Signal, QTimer, QSize
 from PySide6.QtGui import QColor, QIcon
-from PySide6.QtGui import QPixmap, QPainter
+from PySide6.QtGui import QPixmap, QPainter, QFont
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -22,8 +22,9 @@ from PySide6.QtWidgets import (
     QApplication,
     QGraphicsDropShadowEffect,
     QFileDialog,
+    QSystemTrayIcon,
+    QMenu,
 )
-
 from kratt.config import (
     load_settings,
     save_settings,
@@ -38,7 +39,8 @@ class MainWindow(QWidget):
     Main draggable, frameless chat window.
 
     Manages user input, chat history, worker thread execution,
-    and UI state during message generation.
+    and UI state during message generation. Supports system tray
+    integration for minimized state.
     """
 
     toggle_signal = Signal()
@@ -59,6 +61,7 @@ class MainWindow(QWidget):
         self.current_model_used = ""
 
         self._setup_ui()
+        self._setup_tray()
         self._setup_hotkey()
         self.new_chat()
 
@@ -96,6 +99,63 @@ class MainWindow(QWidget):
         self._setup_input_area()
         self._center_window()
 
+    def _setup_tray(self) -> None:
+        """Set up system tray icon with context menu."""
+        self.tray_icon = QSystemTrayIcon(self)
+
+        # Create tray menu
+        tray_menu = QMenu()
+
+        action_show = tray_menu.addAction("Show")
+        action_show.triggered.connect(self.show_window)
+
+        action_hide = tray_menu.addAction("Hide")
+        action_hide.triggered.connect(self.hide)
+
+        tray_menu.addSeparator()
+
+        action_quit = tray_menu.addAction("Quit")
+        action_quit.triggered.connect(QApplication.quit)
+
+        self.tray_icon.setContextMenu(tray_menu)
+
+        self._create_tray_icon_pixmap()
+
+        self.tray_icon.activated.connect(self._on_tray_icon_activated)
+
+        self.tray_icon.show()
+
+    def _create_tray_icon_pixmap(self) -> None:
+        """Create a simple tray icon pixmap with 'K' letter."""
+        pixmap = QPixmap(64, 64)
+        pixmap.fill(QColor(230, 126, 34, 255))
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        font = QFont("Sans Serif", 32, QFont.Weight.Bold)
+        painter.setFont(font)
+        painter.setPen(QColor(255, 255, 255))
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "K")
+
+        painter.end()
+
+        self.tray_icon.setIcon(QIcon(pixmap))
+
+    def _on_tray_icon_activated(self, reason) -> None:
+        """Handle tray icon activation (click)."""
+        if reason in (
+                QSystemTrayIcon.ActivationReason.Trigger,
+                QSystemTrayIcon.ActivationReason.DoubleClick,
+        ):
+            self.show_window()
+
+    def show_window(self) -> None:
+        """Show the window and bring it to focus."""
+        self.show()
+        self.activateWindow()
+        self.txt_input.setFocus()
+
     def _setup_header(self) -> None:
         """Set up the top bar with title, new chat, settings, and close buttons."""
         self.header = QFrame()
@@ -125,7 +185,7 @@ class MainWindow(QWidget):
         btn_close.setObjectName("CloseBtn")
         btn_close.setFixedSize(28, 28)
         btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_close.clicked.connect(self.close)
+        btn_close.clicked.connect(self.toggle_visibility)
 
         self.header_layout.addWidget(title)
         self.header_layout.addStretch()
@@ -146,7 +206,6 @@ class MainWindow(QWidget):
 
         self.chat_widget = QWidget()
         self.chat_widget.setObjectName("ChatWidget")
-        # Important: Allow the chat_widget to be styled via CSS background-color rules
         self.chat_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
 
         self.chat_layout = QVBoxLayout()
@@ -500,6 +559,4 @@ class MainWindow(QWidget):
         if self.isVisible():
             self.hide()
         else:
-            self.show()
-            self.activateWindow()
-            self.txt_input.setFocus()
+            self.show_window()
