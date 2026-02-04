@@ -9,10 +9,10 @@ from kratt.core.tools import find_files as raw_find_files
 
 @tool
 def search_files_tool(
-    pattern: str,
-    path: str = ".",
-    file_pattern: str = "*",
-    max_results: int = 20
+        pattern: str,
+        path: str = ".",
+        file_pattern: str = "*",
+        max_results: int = 20
 ) -> str:
     """
     Search for text patterns in files using grep.
@@ -23,9 +23,9 @@ def search_files_tool(
 
 @tool
 def find_files_tool(
-    name_pattern: str,
-    path: str = ".",
-    max_results: int = 20
+        name_pattern: str,
+        path: str = ".",
+        max_results: int = 20
 ) -> str:
     """
     Find files by filename pattern (glob) within a directory.

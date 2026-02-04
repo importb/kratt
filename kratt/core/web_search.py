@@ -62,8 +62,7 @@ def filter_search_results(user_term: str, results: list[dict], model_name: str) 
     Returns:
         Filtered list of relevant search results.
     """
-    if len(results) <= 2:
-        return results
+    # The 'if len(results) <= 2:' check has been removed.
 
     filtered_results = []
     for item in results:

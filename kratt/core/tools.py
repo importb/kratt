@@ -10,10 +10,10 @@ from typing import Any
 
 
 def search_files(
-    pattern: str,
-    path: str = ".",
-    file_pattern: str = "*",
-    max_results: int = 20
+        pattern: str,
+        path: str = ".",
+        file_pattern: str = "*",
+        max_results: int = 20
 ) -> str:
     """
     Search for text patterns in files using Python (cross-platform).
@@ -100,9 +100,9 @@ def search_files(
 
 
 def find_files(
-    name_pattern: str,
-    path: str = ".",
-    max_results: int = 20
+        name_pattern: str,
+        path: str = ".",
+        max_results: int = 20
 ) -> str:
     """
     Find files by name pattern using Python (cross-platform).

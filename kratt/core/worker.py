@@ -208,7 +208,8 @@ class OllamaWorker(QThread):
         rag_prompt = (
             f"{self.system_prompt}\n\n"
             f"CONTEXT FROM WEB SEARCH:\n{context}\n\n"
-            f"INSTRUCTION: Answer based on the context above. Citations are optional."
+            f"INSTRUCTION: Answer based on the context above. "
+            f"Do not provide citations or URLs."
         )
 
         # Direct ChatOllama usage for the final RAG answer generation

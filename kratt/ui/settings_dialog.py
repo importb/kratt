@@ -255,17 +255,12 @@ class SettingsDialog(QDialog):
         }
 
     def mousePressEvent(self, event) -> None:
+        """Enable window dragging on left mouse button press."""
         if event.button() == Qt.MouseButton.LeftButton:
-            self.old_pos = event.globalPosition().toPoint()
+            self.windowHandle().startSystemMove()
 
     def mouseMoveEvent(self, event) -> None:
-        if hasattr(self, "old_pos"):
-            current_pos = event.globalPosition().toPoint()
-            dx = current_pos.x() - self.old_pos.x()
-            dy = current_pos.y() - self.old_pos.y()
-            self.move(self.x() + dx, self.y() + dy)
-            self.old_pos = current_pos
+        pass
 
     def mouseReleaseEvent(self, event) -> None:
-        if hasattr(self, "old_pos"):
-            del self.old_pos
+        pass

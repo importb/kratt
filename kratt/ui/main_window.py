@@ -360,21 +360,13 @@ class MainWindow(QWidget):
     def mousePressEvent(self, event) -> None:
         """Enable window dragging on left mouse button press."""
         if event.button() == Qt.MouseButton.LeftButton:
-            self.old_pos = event.globalPosition().toPoint()
+            self.windowHandle().startSystemMove()
 
     def mouseMoveEvent(self, event) -> None:
-        """Handle window dragging. Uses explicit arithmetic to avoid PySide6 binding issues."""
-        if self.old_pos:
-            current_pos = event.globalPosition().toPoint()
-            dx = current_pos.x() - self.old_pos.x()
-            dy = current_pos.y() - self.old_pos.y()
-
-            self.move(self.x() + dx, self.y() + dy)
-            self.old_pos = current_pos
+        pass
 
     def mouseReleaseEvent(self, event) -> None:
-        """Clean up drag tracking on mouse release."""
-        self.old_pos = None
+        pass
 
     def _open_settings(self) -> None:
         """Open the settings dialog (disabled while processing)."""

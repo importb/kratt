@@ -26,7 +26,10 @@ class HotkeyManager:
         def on_press(key: keyboard.Key) -> None:
             self.current_keys.add(key)
             if all(k in self.current_keys for k in self.hotkey_set):
-                self.callback()
+                try:
+                    self.callback()
+                except Exception as e:
+                    print(f"Hotkey callback error: {e}")
 
         def on_release(key: keyboard.Key) -> None:
             try:

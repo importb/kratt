@@ -40,13 +40,21 @@ class RAGManager:
 
         documents = []
         for source, text in text_data.items():
-            documents.append(Document(page_content=text, metadata={"source": source}))
+            content = text.strip()
+            if content:
+                documents.append(Document(page_content=content, metadata={"source": source}))
+
+        if not documents:
+            return False
 
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=RAG_CHUNK_SIZE,
             chunk_overlap=RAG_CHUNK_OVERLAP
         )
         splits = text_splitter.split_documents(documents)
+
+        # Filters out empty splits if any
+        splits = [s for s in splits if s.page_content.strip()]
 
         if not splits:
             return False
@@ -59,28 +67,21 @@ class RAGManager:
             print(f"RAG Ingestion failed: {e}")
             return False
 
-    def retrieve(self, query: str) -> str:
+    def retrieve(self, query: str, top_k: int = RAG_TOP_K) -> str:
         """
         Retrieve relevant context for a query using similarity search.
-
-        Args:
-            query: The search query.
-
-        Returns:
-            Formatted string of relevant documents with source attribution.
         """
         if not self.vector_store:
             return ""
 
         try:
-            retriever = self.vector_store.as_retriever(search_kwargs={"k": RAG_TOP_K})
+            retriever = self.vector_store.as_retriever(search_kwargs={"k": top_k})
             docs = retriever.invoke(query)
 
             context_str = ""
-            for i, doc in enumerate(docs):
-                source = doc.metadata.get("source", "unknown")
+            for doc in docs:
                 content = doc.page_content.replace("\n", " ")
-                context_str += f"[Source {i + 1}: {source}]\n{content}\n\n"
+                context_str += f"{content}\n\n"
 
             return context_str
         except Exception as e:
