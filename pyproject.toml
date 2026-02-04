@@ -26,14 +26,14 @@ dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
-    "pytest-qt>=4.5.0",
+    "coverage>=7.0.0",
 ]
 
 [project.scripts]
 kratt = "kratt.main:main"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
@@ -41,16 +41,18 @@ where = ["."]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --strict-markers"
-markers = [
-    "integration: marks tests as integration tests",
-    "ui: marks tests as UI tests",
-]
+addopts = "--cov=kratt --cov-report=term-missing --cov-report=html"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 
 [tool.coverage.run]
 omit = [
     "kratt/main.py",
+    "*/site-packages/*",
+    "*/distutils/*",
 ]
+branch = true
 
 [tool.coverage.report]
 exclude_lines = [
@@ -62,5 +64,9 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
+    "except ImportError",
+    "except ModuleNotFoundError",
 ]
 precision = 2
+skip_empty = true
+fail_under = 65
