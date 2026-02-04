@@ -4,7 +4,7 @@ System-wide hotkey detection using keyboard library.
 Provides global hotkey detection across all applications on Linux/Fedora
 without requiring window focus or elevated privileges.
 """
-
+from pynput import keyboard as pynput_keyboard
 from typing import Callable, Set, Optional
 import keyboard
 
@@ -60,8 +60,6 @@ class HotkeyManager:
         Raises:
             ValueError: If no valid keys can be mapped.
         """
-        from pynput import keyboard as pynput_keyboard
-
         key_map = {
             pynput_keyboard.Key.ctrl_l: "ctrl",
             pynput_keyboard.Key.ctrl_r: "ctrl",

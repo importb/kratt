@@ -18,7 +18,8 @@ dependencies = [
     "langchain-ollama>=1.0.1",
     "langchain-community>=0.4.1",
     "langchain-text-splitters==1.1.0",
-    "faiss-cpu>=1.13.2"
+    "faiss-cpu>=1.13.2",
+    "pynput>=1.8.1"
 ]
 
 [project.optional-dependencies]

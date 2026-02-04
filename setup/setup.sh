@@ -21,7 +21,14 @@ pip install -r requirements.txt
 echo "Installing Playwright browsers..."
 playwright install
 
-# 4. Systemd Auto-startup
+# 4. Add user to input group for global hotkey support
+echo "Adding $USER to input group for global hotkey detection..."
+sudo usermod -a -G input "$USER"
+echo ""
+echo "⚠️  Important: Log out and back in for global hotkeys to work (Ctrl+Alt_R)."
+echo ""
+
+# 5. Systemd Auto-startup
 read -p "Do you want to create a systemd user service for automatic startup? (y/N): " confirm
 if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
     echo "Creating systemd user service..."
