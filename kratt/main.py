@@ -2,7 +2,7 @@
 Application entry point.
 
 Initializes the Qt Application, styling fixes for Linux,
-and the global hotkey listener.
+and the main window with system tray integration.
 """
 
 import sys
@@ -10,8 +10,6 @@ from pathlib import Path
 from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import QApplication
 from kratt.ui.main_window import MainWindow
-from kratt.core.hotkey_manager import HotkeyManager
-from kratt.config import HOTKEY
 
 
 def load_stylesheet(app: QApplication) -> None:
@@ -47,13 +45,8 @@ def main() -> None:
     app.setStyleSheet(current_style + f"\nQToolTip {{ font-family: '{font_family}'; }}")
 
     window = MainWindow()
-
-    # Initialize global hotkey listener
-    hotkey_mgr = HotkeyManager(HOTKEY, window.toggle_visibility)
-
     window.show()
     exit_code = app.exec()
-    hotkey_mgr.stop()
     sys.exit(exit_code)
 
 

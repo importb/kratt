@@ -12,12 +12,10 @@ from kratt.config import (
     DEFAULT_MAIN_MODEL,
     DEFAULT_VISION_MODEL,
     DEFAULT_SYSTEM_PROMPT,
-    HOTKEY,
 )
 
 __all__ = [
     "DEFAULT_MAIN_MODEL",
     "DEFAULT_VISION_MODEL",
     "DEFAULT_SYSTEM_PROMPT",
-    "HOTKEY",
 ]
