@@ -1,8 +1,7 @@
 """
-Core backend logic (workers, search, hotkeys).
+Core backend logic (workers, search).
 """
 
-from kratt.core.hotkey_manager import HotkeyManager
 from kratt.core.worker import OllamaWorker
 
-__all__ = ["HotkeyManager", "OllamaWorker"]
+__all__ = ["OllamaWorker"]

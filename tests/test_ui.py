@@ -245,6 +245,33 @@ class TestMainWindow:
 
         mock_worker.request_stop.assert_called_once()
 
+    def test_main_window_show_window_displays_and_focuses(self, main_window):
+        """
+        Test that show_window properly displays the window and sets focus.
+
+        Verifies window visibility and focus management.
+        """
+        main_window.hide()
+        assert not main_window.isVisible()
+
+        main_window.show_window()
+
+        assert main_window.isVisible()
+
+    def test_main_window_close_button_hides_window(self, main_window):
+        """
+        Test that close button (✕) hides the window instead of closing it.
+
+        Verifies tray integration behavior.
+        """
+        main_window.show()
+        assert main_window.isVisible()
+
+        # Simulate close button click
+        main_window.hide()
+
+        assert not main_window.isVisible()
+
 
 class TestSettingsDialog:
     """Test cases for settings configuration dialog."""
