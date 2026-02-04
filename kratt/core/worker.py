@@ -177,21 +177,32 @@ class OllamaWorker(QThread):
         self.status_update.emit(f"*Searching...*")
         raw_results = search_duckduckgo(search_query, num_results=10)
 
+        if self._stop_requested:
+            self.stopped.emit()
+            return
+
         if not raw_results:
             self.new_token.emit("No search results found.")
             self._run_agent(start_time)
             return
 
         filtered = filter_search_results(self.user_text, raw_results, self.model_name)
-        urls = [r['url'] for r in (filtered if filtered else raw_results)[:3]]
 
         if self._stop_requested:
             self.stopped.emit()
             return
 
+        urls = [r['url'] for r in (filtered if filtered else raw_results)[:3]]
+
         self.status_update.emit("*Reading content...*")
         scraper = WebScraper(max_pages_per_site=1, headless=True)
+        scraper.set_stop_flag(self._stop_requested)
+        scraper.stop_requested_callback = lambda: self._stop_requested
         scraped_data = scraper.scrape_urls(urls)
+
+        if self._stop_requested:
+            self.stopped.emit()
+            return
 
         self.status_update.emit("*Analyzing content...*")
         if scraped_data:
@@ -199,6 +210,10 @@ class OllamaWorker(QThread):
             context = rag.retrieve(self.user_text) if success else ""
         else:
             context = ""
+
+        if self._stop_requested:
+            self.stopped.emit()
+            return
 
         if not context:
             context = "No readable content could be extracted from the search results."
@@ -216,9 +231,8 @@ class OllamaWorker(QThread):
         from langchain_ollama import ChatOllama
         chat = ChatOllama(model=self.model_name, temperature=0.1)
 
-        messages = self._history_to_messages(include_system=False)
-        messages = [SystemMessage(content=rag_prompt)] + messages
-        messages.append(HumanMessage(content=self.user_text))
+        base_messages = self._history_to_messages(include_system=False)
+        messages = [SystemMessage(content=rag_prompt)] + base_messages + [HumanMessage(content=self.user_text)]
 
         try:
             for chunk in chat.stream(messages):

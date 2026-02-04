@@ -62,8 +62,6 @@ def filter_search_results(user_term: str, results: list[dict], model_name: str) 
     Returns:
         Filtered list of relevant search results.
     """
-    # The 'if len(results) <= 2:' check has been removed.
-
     filtered_results = []
     for item in results:
         prompt = (
@@ -251,6 +249,22 @@ class WebScraper:
         self.delay = delay
         self.headless = headless
         self.results: dict[str, str] = {}
+        self.stop_requested_callback = None
+
+    def set_stop_flag(self, initial_state: bool = False) -> None:
+        """
+        Set initial stop state (for compatibility).
+
+        Args:
+            initial_state: Initial stop state value.
+        """
+        pass
+
+    def _should_stop(self) -> bool:
+        """Check if stop has been requested."""
+        if self.stop_requested_callback is not None:
+            return self.stop_requested_callback()
+        return False
 
     def scrape_site(self, start_url: str, page: Page) -> dict[str, str]:
         """
@@ -272,6 +286,9 @@ class WebScraper:
         queue: list[tuple[int, str]] = [(0, start_url)]
 
         while queue and len(site_results) < self.max_pages_per_site:
+            if self._should_stop():
+                break
+
             queue.sort(key=lambda x: x[0])
             _, url = queue.pop(0)
 
@@ -284,7 +301,7 @@ class WebScraper:
                     site_results[url] = text
 
                 # Look for body links if more pages are needed
-                if len(site_results) < self.max_pages_per_site:
+                if len(site_results) < self.max_pages_per_site and not self._should_stop():
                     links = extract_links_prioritized(page)
                     for href in links["body"]:
                         normalized = normalize_url(href, domain)
@@ -321,6 +338,8 @@ class WebScraper:
                 page = context.new_page()
 
                 for url in urls:
+                    if self._should_stop():
+                        break
                     self.results.update(self.scrape_site(url, page))
 
                 browser.close()

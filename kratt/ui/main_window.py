@@ -440,7 +440,11 @@ class MainWindow(QWidget):
     def new_chat(self) -> None:
         """Reset conversation history and clear UI for a new chat."""
         if self.is_processing:
-            return
+            self._force_stop()
+            # Wait briefly for worker to acknowledge stop
+            if self.worker is not None and self.worker.isRunning():
+                self.worker.wait(1000)
+
         if self.worker is not None:
             if self.worker.isRunning():
                 self.worker.wait()
