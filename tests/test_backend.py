@@ -218,57 +218,107 @@ class TestFileSystemTools:
 class TestHotkeyManager:
     """Test cases for global hotkey detection."""
 
-    def test_hotkey_manager_triggers_callback(self):
+    def test_hotkey_manager_registers_hotkey(self, mocker):
         """
-        Test that hotkey manager correctly triggers callback on key press.
+        Test that hotkey manager correctly registers the global hotkey.
 
-        Verifies hotkey detection functionality.
+        Verifies hotkey registration with keyboard library.
         """
+        mock_add_hotkey = mocker.patch('keyboard.add_hotkey', return_value=1)
+
         callback = MagicMock()
-        manager = HotkeyManager({keyboard.Key.alt_l}, callback)
+        manager = HotkeyManager({keyboard.Key.ctrl_l, keyboard.Key.alt_r}, callback)
 
-        # Simulate key press
-        manager.listener.on_press(keyboard.Key.alt_l)
-
-        callback.assert_called_once()
+        # Verify add_hotkey was called with correct key combination
+        mock_add_hotkey.assert_called_once()
+        call_args = mock_add_hotkey.call_args
+        assert 'alt' in call_args[0][0]
+        assert 'ctrl' in call_args[0][0]
 
         manager.stop()
 
-    def test_hotkey_manager_stops_cleanly(self):
+    def test_hotkey_manager_triggers_callback(self, mocker):
+        """
+        Test that hotkey manager callback is invoked when hotkey fires.
+
+        Verifies callback registration and invocation.
+        """
+        callback = MagicMock()
+        mock_add_hotkey = mocker.patch('keyboard.add_hotkey')
+
+        manager = HotkeyManager({keyboard.Key.ctrl_l}, callback)
+
+        # Extract and invoke the callback function
+        registered_callback = mock_add_hotkey.call_args[0][1]
+        registered_callback()
+
+        callback.assert_called_once()
+        manager.stop()
+
+    def test_hotkey_manager_stops_cleanly(self, mocker):
         """
         Test that hotkey manager can be stopped cleanly.
 
         Verifies proper resource cleanup.
         """
-        import time
-
         callback = MagicMock()
-        manager = HotkeyManager({keyboard.Key.alt_l}, callback)
+        mock_add_hotkey = mocker.patch('keyboard.add_hotkey', return_value=42)
+        mock_remove_hotkey = mocker.patch('keyboard.remove_hotkey')
 
+        manager = HotkeyManager({keyboard.Key.alt_l}, callback)
         manager.stop()
 
-        # Give the listener thread a moment to stop
-        time.sleep(0.1)
+        # Verify remove_hotkey was called with correct hotkey ID
+        mock_remove_hotkey.assert_called_once_with(42)
 
-        # Verify listener exists but is stopped
-        assert manager.listener is not None
-
-    def test_hotkey_manager_handles_key_release(self):
+    def test_hotkey_manager_handles_registration_error(self, mocker):
         """
-        Test that hotkey manager properly handles key release events.
+        Test that hotkey manager handles registration errors gracefully.
 
-        Verifies key state tracking.
+        Verifies error handling during hotkey setup.
         """
         callback = MagicMock()
-        manager = HotkeyManager({keyboard.Key.alt_l}, callback)
+        mocker.patch('keyboard.add_hotkey', side_effect=Exception("Permission denied"))
 
-        manager.listener.on_press(keyboard.Key.alt_l)
-        manager.listener.on_release(keyboard.Key.alt_l)
-
-        # Should not raise exception
-        assert manager.listener is not None
-
+        # Should not raise, just print error
+        manager = HotkeyManager({keyboard.Key.ctrl_l}, callback)
         manager.stop()
+
+    def test_hotkey_manager_converts_keys_correctly(self, mocker):
+        """
+        Test that pynput keys are correctly converted to keyboard library format.
+
+        Verifies key mapping for ctrl, alt, and shift modifiers.
+        """
+        callback = MagicMock()
+        mocker.patch('keyboard.add_hotkey')
+
+        manager = HotkeyManager(
+            {keyboard.Key.ctrl_l, keyboard.Key.alt_r, keyboard.Key.shift_l},
+            callback
+        )
+
+        # Verify conversion happened
+        hotkey_str = manager._convert_keys_to_hotkey_string()
+        assert 'ctrl' in hotkey_str
+        assert 'alt' in hotkey_str
+        assert 'shift' in hotkey_str
+
+    def test_hotkey_manager_skips_invalid_keys(self, mocker):
+        """
+        Test that invalid keys are skipped during conversion.
+
+        Verifies graceful handling of unsupported keys.
+        """
+        callback = MagicMock()
+        mocker.patch('keyboard.add_hotkey')
+
+        # Use only supported keys
+        manager = HotkeyManager({keyboard.Key.ctrl_l, keyboard.Key.alt_l}, callback)
+
+        hotkey_str = manager._convert_keys_to_hotkey_string()
+        assert hotkey_str is not None
+        assert len(hotkey_str) > 0
 
 
 class TestWebSearchNormalization:

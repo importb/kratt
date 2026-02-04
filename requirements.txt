@@ -1,6 +1,5 @@
 PySide6>=6.10.1
 ollama>=0.6.1
-pynput>=1.8.1
 playwright>=1.57.0
 ddgs>=8.1.1
 langchain>=1.2.8
@@ -9,3 +8,4 @@ langchain-ollama>=1.0.1
 langchain-community>=0.4.1
 langchain-text-splitters==1.1.0
 faiss-cpu>=1.13.2
+keyboard>=0.13.5

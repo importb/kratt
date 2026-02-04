@@ -1,46 +1,98 @@
 """
-System-wide hotkey detection using pynput.
+System-wide hotkey detection using keyboard library.
+
+Provides global hotkey detection across all applications on Linux/Fedora
+without requiring window focus or elevated privileges.
 """
 
-from typing import Callable, Set
-from pynput import keyboard
+from typing import Callable, Set, Optional
+import keyboard
 
 
 class HotkeyManager:
     """
-    Listens for a specific combination of keys to trigger a callback.
+    Manages system-wide hotkey detection and callback invocation.
+
+    Uses the 'keyboard' library for global hotkey detection on Linux.
+
+    Attributes:
+        hotkey_set: Set of pynput Key objects representing the hotkey.
+        callback: Function to invoke when the hotkey is pressed.
     """
 
     def __init__(
-            self, hotkey_set: Set[keyboard.Key], callback: Callable[[], None]
+            self, hotkey_set: Set, callback: Callable[[], None]
     ) -> None:
+        """
+        Initialize the hotkey manager.
+
+        Args:
+            hotkey_set: Set of pynput Key objects (e.g., {Key.ctrl_l, Key.alt_r}).
+            callback: Function to call when hotkey is triggered.
+        """
         self.hotkey_set = hotkey_set
         self.callback = callback
-        self.current_keys: Set[keyboard.Key] = set()
-        self.listener = None
-        self._setup_listener()
+        self._hotkey_id: Optional[int] = None
+        self._setup()
 
-    def _setup_listener(self) -> None:
-        """Starts the background keyboard listener."""
+    def _setup(self) -> None:
+        """Register the global hotkey."""
+        try:
+            key_names = self._convert_keys_to_hotkey_string()
+            self._hotkey_id = keyboard.add_hotkey(
+                key_names,
+                self._on_hotkey_pressed,
+                suppress=False
+            )
+        except Exception as e:
+            print(f"Hotkey registration failed: {e}")
 
-        def on_press(key: keyboard.Key) -> None:
-            self.current_keys.add(key)
-            if all(k in self.current_keys for k in self.hotkey_set):
-                try:
-                    self.callback()
-                except Exception as e:
-                    print(f"Hotkey callback error: {e}")
+    def _convert_keys_to_hotkey_string(self) -> str:
+        """
+        Convert pynput Key objects to keyboard library hotkey format.
 
-        def on_release(key: keyboard.Key) -> None:
-            try:
-                self.current_keys.remove(key)
-            except KeyError:
-                pass
+        The keyboard library supports modifier keys: ctrl, alt, shift.
 
-        self.listener = keyboard.Listener(on_press=on_press, on_release=on_release)
-        self.listener.start()
+        Returns:
+            A hotkey string in format "ctrl+alt+..." compatible with
+            the keyboard library's add_hotkey() method.
+
+        Raises:
+            ValueError: If no valid keys can be mapped.
+        """
+        from pynput import keyboard as pynput_keyboard
+
+        key_map = {
+            pynput_keyboard.Key.ctrl_l: "ctrl",
+            pynput_keyboard.Key.ctrl_r: "ctrl",
+            pynput_keyboard.Key.alt_l: "alt",
+            pynput_keyboard.Key.alt_r: "alt",
+            pynput_keyboard.Key.shift_l: "shift",
+            pynput_keyboard.Key.shift_r: "shift",
+        }
+
+        key_names = []
+        for key in self.hotkey_set:
+            name = key_map.get(key)
+            if name and name not in key_names:
+                key_names.append(name)
+
+        if not key_names:
+            raise ValueError("No valid keys found in hotkey set")
+
+        return "+".join(sorted(key_names))
+
+    def _on_hotkey_pressed(self) -> None:
+        """Invoke the callback when hotkey is detected."""
+        try:
+            self.callback()
+        except Exception:
+            pass
 
     def stop(self) -> None:
-        """Stops the listener thread."""
-        if self.listener:
-            self.listener.stop()
+        """Stop the hotkey listener and clean up resources."""
+        try:
+            if self._hotkey_id is not None:
+                keyboard.remove_hotkey(self._hotkey_id)
+        except Exception:
+            pass

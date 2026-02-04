@@ -1,33 +1,14 @@
 """
 Pytest configuration and fixtures.
 
-Handles mocking of system-level modules (pynput) that require X11 in headless environments.
+Handles mocking of system-level modules (keyboard) that require input device access.
 """
-
-import sys
 import pytest
-from enum import Enum
+import sys
 from unittest.mock import MagicMock, patch
 
-class MockKey(Enum):
-    """Mock keyboard key enum."""
-    alt_l = "alt_l"
-    menu = "menu"
-    alt_r = "alt_r"
-    ctrl_l = "ctrl_l"
-    shift_l = "shift_l"
-
-
 mock_keyboard = MagicMock()
-mock_keyboard.Key = MockKey
-mock_keyboard.Listener = MagicMock
-
-mock_pynput = MagicMock()
-mock_pynput.keyboard = mock_keyboard
-
-sys.modules['pynput.keyboard'] = mock_keyboard
-sys.modules['pynput._util'] = MagicMock()
-sys.modules['pynput'] = mock_pynput
+sys.modules['keyboard'] = mock_keyboard
 
 
 @pytest.fixture(autouse=True)
